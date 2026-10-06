@@ -1,6 +1,8 @@
 "use client";
 import { useRef, useState, useTransition } from "react";
 import { Plus, Trash2 } from "lucide-react";
+import { checkSafety, normalizeDrug, type Allergy, type Med, type SafetyLab } from "@/lib/safety";
+import SafetyAlerts from "@/components/SafetyAlerts";
 import { SOAP_KEYS, type MedChange, type NoteContent, type SoapKey } from "@/lib/scribe";
 import { approveNote, discardNote, saveNoteDraft } from "@/app/(app)/patients/[id]/notes/[noteId]/actions";
 
@@ -11,7 +13,8 @@ const ACTION_STYLE: Record<MedChange["action"], string> = {
 };
 
 export default function NoteReview(p: {
-  noteId: string; approved: boolean; isDoctor: boolean; initial: NoteContent;
+  noteId: string; approved: boolean; isDoctor: boolean; initial: NoteContent; patientId: string;
+  safety: { allergies: Allergy[]; activeMeds: Med[]; labs: SafetyLab[] };
 }) {
   const ro = p.approved;
   const [soap, setSoap] = useState(p.initial.soap);
@@ -24,6 +27,19 @@ export default function NoteReview(p: {
 
   const lit = hover ?? picked;
   const meds = p.initial.med_changes;
+
+  // Active meds with the ticked changes applied, so the doctor sees whether the plan resolves the alerts.
+  let simulated: Med[] = [...p.safety.activeMeds];
+  meds.forEach((c, i) => {
+    if (!ticked.has(i)) return;
+    const at = simulated.findIndex((m) => normalizeDrug(m.drug_name) === normalizeDrug(c.drug_name));
+    const old = simulated[at];
+    if (c.action !== "start" && at >= 0) simulated = simulated.filter((_, j) => j !== at);
+    if (c.action !== "stop" && (c.action === "start" || at >= 0)) {
+      simulated.push({ drug_name: old?.drug_name ?? c.drug_name, dose: c.new_dose ?? old?.dose, frequency: c.new_frequency ?? old?.frequency });
+    }
+  });
+  const alerts = ro ? [] : checkSafety({ patientId: p.patientId, allergies: p.safety.allergies, labs: p.safety.labs, activeMeds: simulated });
 
   const content = (): NoteContent => ({
     ...p.initial,
@@ -136,6 +152,12 @@ export default function NoteReview(p: {
             </>
           )}
         </section>
+
+        {!ro && (
+          <section className="border-t border-slate-100 pt-4">
+            <SafetyAlerts alerts={alerts} title="Safety check (with ticked changes applied)" />
+          </section>
+        )}
 
         {!ro && (
           <div className="space-y-2 border-t border-slate-100 pt-4">

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import { namesMatch } from "@/lib/utils";
 import type { Extraction } from "@/lib/extract";
+import { loadSafetyContext } from "@/lib/safety-context";
 import ReviewForm from "@/components/ReviewForm";
 
 export default async function DocumentPage(props: PageProps<"/patients/[id]/documents/[docId]">) {
@@ -17,6 +18,7 @@ export default async function DocumentPage(props: PageProps<"/patients/[id]/docu
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user?.id ?? "").single();
   const { data: signed } = await supabase.storage.from("documents").createSignedUrl(doc.file_path, 3600);
 
+  const safety = await loadSafetyContext(supabase, id);
   await logAudit({ action: "view", entityType: "document", entityId: docId, patientId: id });
 
   const extraction = (doc.extracted_json ?? null) as Extraction | null;
@@ -39,6 +41,8 @@ export default async function DocumentPage(props: PageProps<"/patients/[id]/docu
           initial={extraction}
           patientName={patient?.name ?? ""}
           nameMismatch={nameMismatch}
+          patientId={id}
+          safety={safety}
         />
       )}
     </div>

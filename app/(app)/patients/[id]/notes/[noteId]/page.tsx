@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import type { NoteContent } from "@/lib/scribe";
+import { loadSafetyContext } from "@/lib/safety-context";
 import NoteReview from "@/components/NoteReview";
 
 export default async function NotePage(props: PageProps<"/patients/[id]/notes/[noteId]">) {
@@ -15,6 +16,7 @@ export default async function NotePage(props: PageProps<"/patients/[id]/notes/[n
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user?.id ?? "").single();
 
+  const safety = await loadSafetyContext(supabase, id);
   await logAudit({ action: "view", entityType: "clinical_note", entityId: noteId, patientId: id });
 
   return (
@@ -25,6 +27,8 @@ export default async function NotePage(props: PageProps<"/patients/[id]/notes/[n
         approved={note.status === "approved"}
         isDoctor={profile?.role === "doctor"}
         initial={note.content as NoteContent}
+        patientId={id}
+        safety={safety}
       />
     </div>
   );

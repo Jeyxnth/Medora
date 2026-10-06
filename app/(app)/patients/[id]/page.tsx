@@ -5,7 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import { buildTimeline } from "@/lib/timeline";
 import { ageFromDob } from "@/lib/utils";
+import { checkSafety } from "@/lib/safety";
+import type { TrendLab } from "@/lib/trends";
 import Timeline from "@/components/Timeline";
+import SafetyAlerts from "@/components/SafetyAlerts";
+import TrendsCard from "@/components/TrendsCard";
 
 export default async function PatientPage(props: PageProps<"/patients/[id]">) {
   const { id } = await props.params;
@@ -37,6 +41,7 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
     notes: notes.data ?? [],
   });
   const allergyList = allergies.data ?? [];
+  const alerts = checkSafety({ patientId: id, allergies: allergyList, activeMeds, labs: labs.data ?? [] });
   const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 
   return (
@@ -77,6 +82,10 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
       )}
 
       <div className={card}>
+        <SafetyAlerts alerts={alerts} />
+      </div>
+
+      <div className={card}>
         <h2 className="mb-3 font-semibold text-slate-900">Current medications</h2>
         {activeMeds.length === 0 ? (
           <p className="text-sm text-slate-500">No active medications.</p>
@@ -91,6 +100,8 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
           </ul>
         )}
       </div>
+
+      <TrendsCard patientId={id} labs={(labs.data ?? []) as TrendLab[]} />
 
       <div className={card}>
         <h2 className="mb-3 font-semibold text-slate-900">Timeline</h2>

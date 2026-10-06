@@ -39,3 +39,10 @@ Keep code simple, small files, no over-engineering, no tests unless asked, no ne
 - `app/api/extract/route.ts` — POST {documentId}: download image, extract+validate, save to documents.extracted_json, audit 'extract'.
 - `app/(app)/patients/[id]/upload` + `components/UploadForm.tsx` — resize (canvas), upload to 'documents' bucket, insert draft row, call /api/extract.
 - `app/(app)/patients/[id]/documents/[docId]` — review page (`components/ReviewForm.tsx`) + `actions.ts` server actions saveDraft/approveDocument (doctor only)/discardDocument. Approve writes lab_results (flag stored as high/low/normal) or medications.
+- `lib/scribe.ts` — scribe types (`NoteContent`, `Segment`, `MedChange`), `splitTranscript()`, `draftNote()` (one Gemini call: speakers + cited SOAP + med_changes), `transcriptText()`.
+- `app/api/consult/route.ts` — POST multipart {patientId, audio | transcriptText}: Groq whisper (verbose_json, audio never stored) -> draftNote -> clinical_notes draft, audit 'create_note'.
+- `app/(app)/patients/[id]/consult` + `components/ConsultForm.tsx` — consent gate, record/upload/paste tabs, 3-step progress.
+- `app/(app)/patients/[id]/notes/[noteId]` — note review page (`components/NoteReview.tsx`) + `actions.ts` saveNoteDraft/approveNote (doctor only; creates encounter, applies ticked med changes, redirects with ?notice=)/discardNote.
+- `lib/safety.ts` — pure: `normalizeDrug()` (brand->generic), `parseDailyDoseMg()`, `checkSafety()` -> alerts (allergy, duplicate, renal, potassium, ~40 curated interactions; demo subset). `lib/safety-context.ts` loads its inputs for a patient.
+- `components/SafetyAlerts.tsx` — alert list used on patient page, prescription review (live, new rows only, critical needs "reviewed" tick) and note review (with ticked changes applied).
+- `lib/trends.ts` — pure `groupSeries()`, `trendInsights()` (3+ results moving worse). `components/TrendsCard.tsx` — recharts line charts with reference band.

@@ -3,6 +3,8 @@ import { useState, useTransition } from "react";
 import { ZoomIn, ZoomOut, Plus, Trash2, AlertTriangle } from "lucide-react";
 import type { Extraction, LabResult, Medication } from "@/lib/extract";
 import { validateLab, validateMed } from "@/lib/validate";
+import { checkSafety, type Allergy, type Med, type SafetyLab } from "@/lib/safety";
+import SafetyAlerts from "@/components/SafetyAlerts";
 import { approveDocument, discardDocument, saveDraft } from "@/app/(app)/patients/[id]/documents/[docId]/actions";
 
 type LabRow = {
@@ -36,12 +38,13 @@ const toMed = (r: MedRow): Medication => ({
   confidence: r.confidence,
 });
 
-const inputCls = "w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm disabled:border-transparent disabled:bg-transparent";
+const inputCls = "w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 disabled:border-transparent disabled:bg-transparent";
 const FLAG_STYLE: Record<string, string> = { H: "text-red-600", L: "text-red-600", N: "text-slate-500" };
 
 export default function ReviewForm(p: {
   docId: string; docType: string; approved: boolean; isDoctor: boolean; imageUrl: string | null;
-  initial: Extraction; patientName: string; nameMismatch: boolean;
+  initial: Extraction; patientName: string; nameMismatch: boolean; patientId: string;
+  safety: { allergies: Allergy[]; activeMeds: Med[]; labs: SafetyLab[] };
 }) {
   const ro = p.approved;
   const [date, setDate] = useState(p.initial.document_date ?? "");
@@ -60,11 +63,21 @@ export default function ReviewForm(p: {
   const [nameOk, setNameOk] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [msg, setMsg] = useState<string | null>(null);
+  const [reviewedKey, setReviewedKey] = useState("");
   const [pending, start] = useTransition();
 
   const isLab = p.docType === "lab_report";
   const labV = labs.map((r) => validateLab(toLab(r)));
   const medV = meds.map((r) => validateMed(toMed(r)));
+  // Safety check: current active meds plus the rows in the form; only alerts involving the new rows are shown.
+  const existing = p.safety.activeMeds.length;
+  const alerts = p.docType === "prescription" && !ro
+    ? checkSafety({
+        patientId: p.patientId, allergies: p.safety.allergies, labs: p.safety.labs,
+        activeMeds: [...p.safety.activeMeds, ...meds.filter((m) => m.drug_name.trim()).map((m) => ({ drug_name: m.drug_name.trim(), dose: m.dose, frequency: m.frequency }))],
+      }).filter((a) => a.medIndexes.some((i) => i >= existing))
+    : [];
+  const criticalKey = alerts.filter((a) => a.severity === "critical").map((a) => a.key).join("|");
   const unresolved =
     labV.filter((v, i) => v.issues.length && !labs[i].ok).length +
     medV.filter((v, i) => v.issues.length && !meds[i].ok).length;
@@ -85,6 +98,7 @@ export default function ReviewForm(p: {
     !p.isDoctor ? "Only a doctor can approve. Ask a doctor to review."
     : !date ? "Set the document date."
     : p.nameMismatch && !nameOk ? "Confirm the patient name."
+    : criticalKey && reviewedKey !== criticalKey ? "Review the critical safety alerts and tick the confirmation."
     : unresolved ? `${unresolved} flagged row${unresolved > 1 ? "s" : ""} to verify.`
     : null;
 
@@ -207,6 +221,18 @@ export default function ReviewForm(p: {
               <button onClick={() => setMeds([...meds, { key: newKey(), drug_name: "", dose: "", frequency: "", duration: "", confidence: "high", ok: false }])} className="flex items-center gap-1 text-sm text-teal-700">
                 <Plus size={14} /> Add row
               </button>
+            )}
+          </section>
+        )}
+
+        {p.docType === "prescription" && !ro && (
+          <section className="space-y-2 border-t border-slate-100 pt-4">
+            <SafetyAlerts alerts={alerts} title="Safety check" emptyText="No safety alerts for these medications" />
+            {criticalKey && (
+              <label className="flex items-center gap-2 text-sm font-medium text-red-800">
+                <input type="checkbox" checked={reviewedKey === criticalKey} onChange={(e) => setReviewedKey(e.target.checked ? criticalKey : "")} />
+                I have reviewed these alerts
+              </label>
             )}
           </section>
         )}
