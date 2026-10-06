@@ -75,7 +75,7 @@ Rules:
 - Never compute flags or reference ranges yourself. printed_flag is only a flag printed on the document (e.g. "H", "L", "High"), else null.
 - value_text is the result exactly as printed. value is its number, or null if not numeric.
 - Reference ranges: "> 90" means ref_low 90 and ref_high null; "< 30" means ref_high 30 and ref_low null; "4.0 - 5.6" means ref_low 4.0 and ref_high 5.6.
-- document_date must be ISO yyyy-mm-dd, or null if not printed or ambiguous.
+- Dates on Indian documents are day-first (DD/MM/YYYY); always output ISO yyyy-mm-dd. If a date is ambiguous or missing, return null.
 - Use "low" confidence for anything blurry, cut off or ambiguous.
 - Ignore headers, footers and signatures, except for the document date, patient name, lab name and prescriber.
 - For a lab report fill lab_results and leave medications empty; for a prescription fill medications and leave lab_results empty.`;

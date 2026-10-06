@@ -1,12 +1,15 @@
 import Link from "next/link";
+import UploadForm from "@/components/UploadForm";
 
 export default async function UploadPage(props: PageProps<"/patients/[id]/upload">) {
   const { id } = await props.params;
   return (
-    <div>
+    <div className="mx-auto max-w-xl space-y-4">
       <Link href={`/patients/${id}`} className="text-sm text-teal-700 hover:underline">← Back to patient</Link>
-      <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-        Report upload and AI extraction will be built in Phase 3.
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h1 className="text-xl font-semibold text-slate-900">Upload report</h1>
+        <p className="mb-4 mt-1 text-sm text-slate-500">Lab report or prescription (photo or scan). AI reads it; you review before anything is saved.</p>
+        <UploadForm patientId={id} />
       </div>
     </div>
   );

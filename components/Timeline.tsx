@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { Stethoscope, FlaskConical, Pill, FileText, NotebookPen, ChevronDown } from "lucide-react";
 import { isOutOfRange, formatRange, type TimelineItem, type TimelineType } from "@/lib/timeline";
 
@@ -58,6 +59,11 @@ function Item({ item }: { item: TimelineItem }) {
         </div>
         {item.detail && <p className="mt-1 text-sm text-slate-600">{item.detail}</p>}
         {item.labs && open && <LabTable labs={item.labs} />}
+        {item.href && (
+          <Link href={item.href} className="mt-2 inline-block text-xs font-medium text-teal-700 hover:underline">
+            {item.draft ? "Review draft" : item.type === "note" ? "View note" : "View source document"}
+          </Link>
+        )}
       </div>
     </div>
   );

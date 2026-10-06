@@ -7,6 +7,7 @@ export type LabRow = {
   ref_low: number | null;
   ref_high: number | null;
   flag: string | null;
+  document_id?: string | null;
   prev?: number | null; // value of the same test at the previous earlier date
 };
 
@@ -18,6 +19,7 @@ export type TimelineItem = {
   detail?: string;
   draft?: boolean;
   labs?: LabRow[];
+  href?: string; // review page of the source document or note
 };
 
 type Row = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -35,6 +37,7 @@ export function formatRange(l: Pick<LabRow, "ref_low" | "ref_high">): string {
 }
 
 export function buildTimeline(src: {
+  patientId: string;
   encounters: Row[];
   labs: Row[];
   medications: Row[];
@@ -42,6 +45,7 @@ export function buildTimeline(src: {
   notes: Row[];
 }): TimelineItem[] {
   const items: TimelineItem[] = [];
+  const docHref = (id: string) => `/patients/${src.patientId}/documents/${id}`;
 
   for (const e of src.encounters) {
     if (!e.encounter_date) continue;
@@ -61,9 +65,11 @@ export function buildTimeline(src: {
       l.prev = hit ? hit.value : null;
     }
     const abnormal = labs.filter(isOutOfRange).length;
+    const docId = labs.find((l) => l.document_id)?.document_id;
     items.push({
       id: `lab-${date}`, type: "lab", date, title: `Lab results (${labs.length} tests)`,
       detail: abnormal ? `${abnormal} out of range` : "All in range", labs,
+      href: docId ? docHref(docId) : undefined,
     });
   }
 
@@ -74,11 +80,11 @@ export function buildTimeline(src: {
   }
 
   for (const d of src.documents) {
-    items.push({ id: `doc-${d.id}`, type: "document", date: String(d.uploaded_at).slice(0, 10), title: d.doc_type || "Document", draft: d.status === "draft" });
+    items.push({ id: `doc-${d.id}`, type: "document", date: String(d.uploaded_at).slice(0, 10), title: d.doc_type === "lab_report" ? "Lab report" : d.doc_type === "prescription" ? "Prescription" : d.doc_type === "pending" ? "Document (not read yet)" : "Document", draft: d.status === "draft", href: docHref(d.id) });
   }
 
   for (const n of src.notes) {
-    items.push({ id: `note-${n.id}`, type: "note", date: String(n.created_at).slice(0, 10), title: n.note_type ? `${n.note_type} note` : "Clinical note", draft: n.status === "draft" });
+    items.push({ id: `note-${n.id}`, type: "note", date: String(n.created_at).slice(0, 10), title: n.note_type ? `${n.note_type} note` : "Clinical note", draft: n.status === "draft", href: `/patients/${src.patientId}/notes/${n.id}` });
   }
 
   return items.sort((a, b) => b.date.localeCompare(a.date));

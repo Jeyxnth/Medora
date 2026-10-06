@@ -9,6 +9,7 @@ import Timeline from "@/components/Timeline";
 
 export default async function PatientPage(props: PageProps<"/patients/[id]">) {
   const { id } = await props.params;
+  const { notice } = await props.searchParams;
   const supabase = await createClient();
 
   const { data: patient } = await supabase.from("patients").select("*").eq("id", id).single();
@@ -28,6 +29,7 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
   const today = new Date().toISOString().slice(0, 10);
   const activeMeds = (meds.data ?? []).filter((m) => !m.end_date || m.end_date > today);
   const items = buildTimeline({
+    patientId: id,
     encounters: encounters.data ?? [],
     labs: labs.data ?? [],
     medications: meds.data ?? [],
@@ -40,6 +42,10 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
   return (
     <div className="space-y-4">
       <Link href="/patients" className="text-sm text-teal-700 hover:underline">← All patients</Link>
+
+      {typeof notice === "string" && (
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{notice}</p>
+      )}
 
       <div className={`${card} flex flex-wrap items-center justify-between gap-4`}>
         <div>

@@ -35,3 +35,7 @@ Keep code simple, small files, no over-engineering, no tests unless asked, no ne
 - `lib/extract.ts` — `extractDocument(image, mimeType)`: Gemini vision -> raw `Extraction` (lab results / medications), transcribe-only.
 - `lib/validate.ts` — `validateExtraction()`: canonical test names, computed H/L/N flag, per-row `issues` + `status` ok|check.
 - `scripts/test-extract.ts` — `npm run test-extract`: runs sample-docs/* through extract+validate, prints tables, saves JSON to sample-docs/out/.
+- `lib/validate.ts` also exports `validateLab/validateMed/computeFlag/canonicalName` (pure, used client-side); name lookup: full -> no parentheses -> no qualifiers.
+- `app/api/extract/route.ts` — POST {documentId}: download image, extract+validate, save to documents.extracted_json, audit 'extract'.
+- `app/(app)/patients/[id]/upload` + `components/UploadForm.tsx` — resize (canvas), upload to 'documents' bucket, insert draft row, call /api/extract.
+- `app/(app)/patients/[id]/documents/[docId]` — review page (`components/ReviewForm.tsx`) + `actions.ts` server actions saveDraft/approveDocument (doctor only)/discardDocument. Approve writes lab_results (flag stored as high/low/normal) or medications.
