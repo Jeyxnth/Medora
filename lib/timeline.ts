@@ -7,6 +7,7 @@ export type LabRow = {
   ref_low: number | null;
   ref_high: number | null;
   flag: string | null;
+  prev?: number | null; // value of the same test at the previous earlier date
 };
 
 export type TimelineItem = {
@@ -24,6 +25,13 @@ type Row = Record<string, any>; // eslint-disable-line @typescript-eslint/no-exp
 export function isOutOfRange(l: LabRow): boolean {
   if (l.flag && l.flag.toLowerCase() !== "normal") return true;
   return (l.ref_low != null && l.value < l.ref_low) || (l.ref_high != null && l.value > l.ref_high);
+}
+
+export function formatRange(l: Pick<LabRow, "ref_low" | "ref_high">): string {
+  if (l.ref_low != null && l.ref_high != null) return `${l.ref_low} - ${l.ref_high}`;
+  if (l.ref_low != null) return `> ${l.ref_low}`;
+  if (l.ref_high != null) return `< ${l.ref_high}`;
+  return "-";
 }
 
 export function buildTimeline(src: {
@@ -45,7 +53,13 @@ export function buildTimeline(src: {
     if (!l.collected_date) continue;
     byDate.set(l.collected_date, [...(byDate.get(l.collected_date) ?? []), l as LabRow]);
   }
+  const dates = [...byDate.keys()].sort();
   for (const [date, labs] of byDate) {
+    const earlier = dates.filter((d) => d < date).reverse(); // nearest first
+    for (const l of labs) {
+      const hit = earlier.map((d) => byDate.get(d)!.find((x) => x.test_name === l.test_name)).find(Boolean);
+      l.prev = hit ? hit.value : null;
+    }
     const abnormal = labs.filter(isOutOfRange).length;
     items.push({
       id: `lab-${date}`, type: "lab", date, title: `Lab results (${labs.length} tests)`,

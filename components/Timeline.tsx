@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Stethoscope, FlaskConical, Pill, FileText, NotebookPen, ChevronDown } from "lucide-react";
-import { isOutOfRange, type TimelineItem, type TimelineType } from "@/lib/timeline";
+import { isOutOfRange, formatRange, type TimelineItem, type TimelineType } from "@/lib/timeline";
 
 const TYPES: Record<TimelineType, { label: string; icon: typeof Pill; color: string }> = {
   encounter: { label: "Encounters", icon: Stethoscope, color: "bg-sky-100 text-sky-700" },
@@ -20,12 +20,18 @@ function LabTable({ labs }: { labs: NonNullable<TimelineItem["labs"]> }) {
       <tbody>
         {labs.map((l, i) => {
           const bad = isOutOfRange(l);
+          const marker = l.ref_low != null && l.value < l.ref_low ? "L" : l.ref_high != null && l.value > l.ref_high ? "H" : bad ? "!" : "";
           return (
-            <tr key={i} className={`border-t border-slate-100 ${bad ? "font-semibold text-red-600" : "text-slate-700"}`}>
+            <tr key={i} className="border-t border-slate-100 text-slate-700">
               <td className="py-1">{l.test_name}</td>
-              <td>{l.value}</td>
+              <td>
+                <span className={bad ? "font-semibold text-red-600" : ""}>{l.value}{marker && ` ${marker}`}</span>
+                {l.prev != null && l.prev !== l.value && (
+                  <span className="ml-1 text-slate-500">{l.value > l.prev ? "↑" : "↓"} (was {l.prev})</span>
+                )}
+              </td>
               <td>{l.unit}</td>
-              <td>{l.ref_low ?? "–"} – {l.ref_high ?? "–"}</td>
+              <td>{formatRange(l)}</td>
             </tr>
           );
         })}

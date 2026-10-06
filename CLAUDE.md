@@ -26,8 +26,12 @@ Keep code simple, small files, no over-engineering, no tests unless asked, no ne
 - `proxy.ts` — Next 16 proxy: refreshes Supabase session, redirects unauthenticated users to /login.
 - `lib/supabase/server.ts` / `client.ts` — `createClient()` for server (async, cookies) and browser.
 - `lib/audit.ts` — `logAudit({ action, entityType, entityId, patientId })` inserts into audit_log.
-- `lib/timeline.ts` — pure `buildTimeline()` merging encounters, labs (grouped by date), meds, documents, notes; `isOutOfRange()`.
+- `lib/timeline.ts` — pure `buildTimeline()` merging encounters, labs (grouped by date), meds, documents, notes; `isOutOfRange()`, `formatRange()`; labs carry `prev` (previous value of same test).
 - `lib/utils.ts` — `ageFromDob()`.
 - `app/login` — login page (demo fill buttons). `app/(app)/` — shell layout with `components/Header.tsx`.
 - `app/(app)/patients` (list), `patients/[id]` (patient page), `upload` and `consult` placeholders.
 - `components/` — Header, LogoutButton, PatientList, Timeline.
+- `lib/llm.ts` — `generateJSON({ system, prompt, images?, schema })`: Gemini (inline base64 images), Groq text fallback on 429.
+- `lib/extract.ts` — `extractDocument(image, mimeType)`: Gemini vision -> raw `Extraction` (lab results / medications), transcribe-only.
+- `lib/validate.ts` — `validateExtraction()`: canonical test names, computed H/L/N flag, per-row `issues` + `status` ok|check.
+- `scripts/test-extract.ts` — `npm run test-extract`: runs sample-docs/* through extract+validate, prints tables, saves JSON to sample-docs/out/.
