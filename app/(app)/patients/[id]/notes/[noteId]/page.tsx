@@ -21,7 +21,7 @@ export default async function NotePage(props: PageProps<"/patients/[id]/notes/[n
   await logAudit({ action: "view", entityType: "clinical_note", entityId: noteId, patientId: id });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <Link href={`/patients/${id}`} className="text-sm text-teal-700 hover:underline">← Back to {patient?.name ?? "patient"}</Link>
       <NoteReview
         noteId={noteId}

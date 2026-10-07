@@ -1,6 +1,6 @@
 "use client";
-import { useRef, useState, useTransition } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { checkSafety, normalizeDrug, type Allergy, type Med, type SafetyLab } from "@/lib/safety";
 import SafetyAlerts from "@/components/SafetyAlerts";
 import { SOAP_KEYS, type MedChange, type NoteContent, type SoapKey } from "@/lib/scribe";
@@ -12,6 +12,20 @@ const ACTION_STYLE: Record<MedChange["action"], string> = {
   change: "bg-sky-100 text-sky-800",
 };
 
+function AutoText({ value, disabled, onChange }: { value: string; disabled: boolean; onChange: (t: string) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+  return (
+    <textarea ref={ref} rows={1} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}
+      className="min-w-0 flex-1 resize-none overflow-hidden rounded border border-transparent bg-transparent px-1.5 py-1 text-sm leading-snug text-slate-900 hover:border-slate-200 focus:border-teal-500 focus:bg-white disabled:bg-transparent" />
+  );
+}
+
 export default function NoteReview(p: {
   noteId: string; approved: boolean; isDoctor: boolean; canDiscard: boolean; initial: NoteContent; patientId: string;
   safety: { allergies: Allergy[]; activeMeds: Med[]; labs: SafetyLab[] };
@@ -22,6 +36,8 @@ export default function NoteReview(p: {
   const [hover, setHover] = useState<number | null>(null);
   const [picked, setPicked] = useState<number | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<SoapKey>>(new Set());
+  const [safetyOpen, setSafetyOpen] = useState(false);
   const [pending, start] = useTransition();
   const transcript = useRef<HTMLDivElement>(null);
 
@@ -51,6 +67,12 @@ export default function NoteReview(p: {
   const setText = (k: SoapKey, i: number, text: string) =>
     setSoap({ ...soap, [k]: soap[k].map((x, j) => (j === i ? { ...x, text } : x)) });
 
+  const toggleSection = (k: SoapKey) => {
+    const n = new Set(collapsed);
+    if (n.has(k)) n.delete(k); else n.add(k);
+    setCollapsed(n);
+  };
+
   function jump(id: number) {
     setPicked(id);
     transcript.current?.querySelector(`#seg-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -70,15 +92,20 @@ export default function NoteReview(p: {
       </button>
     ));
 
+  const critical = alerts.filter((a) => a.severity === "critical").length;
+  const warnings = alerts.length - critical;
+  const showSafety = critical > 0 || safetyOpen;
+  const safetySummary = alerts.length === 0 ? "No safety alerts" : [critical && `${critical} critical`, warnings && `${warnings} warning`].filter(Boolean).join(", ");
+
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <div className="card p-4">
-        <h2 className="mb-3 text-sm font-semibold text-slate-900">Transcript</h2>
-        <div ref={transcript} className="max-h-[75vh] space-y-2 overflow-auto pr-1 text-sm">
+    <div className="grid gap-3 lg:h-[calc(100vh-9rem)] lg:grid-cols-2 lg:grid-rows-1">
+      <div className="card flex max-h-[60vh] min-h-0 flex-col p-4 lg:max-h-none">
+        <h2 className="mb-2 shrink-0 text-sm font-semibold text-slate-900">Transcript</h2>
+        <div ref={transcript} className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1 text-sm leading-snug">
           {p.initial.segments.map((s) => (
             <div key={s.id} id={`seg-${s.id}`}
-              className={`rounded-lg border-l-4 px-3 py-2 transition-colors ${s.speaker === "doctor" ? "border-teal-500" : s.speaker === "patient" ? "border-slate-400" : "border-slate-200"} ${lit === s.id ? "bg-amber-100" : "bg-slate-50"}`}>
-              <span className={`mr-2 text-xs font-semibold uppercase ${s.speaker === "doctor" ? "text-teal-700" : "text-slate-500"}`}>
+              className={`rounded-md border-l-4 px-2.5 py-1 transition-colors ${s.speaker === "doctor" ? "border-teal-500" : s.speaker === "patient" ? "border-slate-400" : "border-slate-200"} ${lit === s.id ? "bg-amber-100" : "bg-slate-50"}`}>
+              <span className={`mr-1.5 text-xs font-semibold uppercase ${s.speaker === "doctor" ? "text-teal-700" : "text-slate-500"}`}>
                 {s.speaker === "doctor" ? "Doctor" : s.speaker === "patient" ? "Patient" : "Other"} <span className="font-normal text-slate-400">[{s.id}]</span>
               </span>
               <span className="text-slate-800">{s.text}</span>
@@ -87,92 +114,112 @@ export default function NoteReview(p: {
         </div>
       </div>
 
-      <div className="space-y-4 card p-5">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">SOAP note</span>
-          {ro ? (
-            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Approved</span>
-          ) : (
-            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Draft - needs review</span>
+      <div className="card flex min-h-0 flex-col">
+        <div className="min-h-0 flex-1 space-y-3 p-4 lg:overflow-y-auto">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">SOAP note</span>
+            {ro ? (
+              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Approved</span>
+            ) : (
+              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Draft - needs review</span>
+            )}
+          </div>
+
+          {SOAP_KEYS.map(({ key, label }) => (
+            <section key={key} className="mb-3">
+              <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
+                <button type="button" onClick={() => toggleSection(key)} aria-expanded={!collapsed.has(key)}
+                  className="flex items-center gap-1.5 rounded text-sm font-semibold text-slate-900">
+                  {collapsed.has(key) ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
+                  {label}
+                </button>
+                <span className="rounded-full bg-slate-100 px-1.5 text-xs font-medium text-slate-600">{soap[key].length}</span>
+                {!ro && (
+                  <button type="button" onClick={() => setSoap({ ...soap, [key]: [...soap[key], { text: "", sources: [] }] })}
+                    className="ml-auto flex items-center gap-0.5 text-xs font-medium text-teal-700 hover:underline"><Plus size={12} /> Add statement</button>
+                )}
+              </div>
+              {!collapsed.has(key) && (
+                soap[key].length === 0 ? (
+                  <p className="py-1 text-sm italic text-slate-500">Not discussed</p>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {soap[key].map((x, i) => (
+                      <div key={i} className="group flex items-start gap-2 py-0.5">
+                        <AutoText value={x.text} disabled={ro} onChange={(t) => setText(key, i, t)} />
+                        <div className="flex shrink-0 items-center gap-1 pt-1.5">
+                          {x.sources.length ? chips(x.sources) : <span className="text-xs text-slate-400">no source</span>}
+                          {!ro && (
+                            <button type="button" aria-label="Delete statement" onClick={() => setSoap({ ...soap, [key]: soap[key].filter((_, j) => j !== i) })}
+                              className="text-slate-400 opacity-0 hover:text-red-600 focus:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"><Trash2 size={14} /></button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+            </section>
+          ))}
+
+          {p.initial.not_discussed.length > 0 && (
+            <p className="text-xs text-slate-500"><strong>Not mentioned in the conversation:</strong> {p.initial.not_discussed.join(", ")}</p>
+          )}
+
+          <section className="border-t border-slate-100 pt-3">
+            <h2 className="text-sm font-semibold text-slate-900">Suggested medication updates</h2>
+            {meds.length === 0 ? (
+              <p className="py-1 text-sm italic text-slate-500">None mentioned</p>
+            ) : (
+              <>
+                <p className="mb-1 text-xs text-slate-500">
+                  {ro ? "Changes ticked at approval were applied to the medication list." : "Only ticked changes are applied to the medication list on approval."}
+                </p>
+                <div className="divide-y divide-slate-100">
+                  {meds.map((m, i) => (
+                    <label key={i} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 py-1 text-sm text-slate-800">
+                      <input type="checkbox" disabled={ro}
+                        checked={ro ? !!m.applied : ticked.has(i)}
+                        onChange={(e) => { const n = new Set(ticked); if (e.target.checked) n.add(i); else n.delete(i); setTicked(n); }} />
+                      <span className={`rounded px-1.5 py-0.5 text-xs font-medium uppercase ${ACTION_STYLE[m.action]}`}>{m.action}</span>
+                      <strong>{m.drug_name}</strong>
+                      {(m.new_dose || m.new_frequency) && <span className="text-slate-600">· {[m.new_dose, m.new_frequency].filter(Boolean).join(" ")}</span>}
+                      {m.reason && <span className="text-xs text-slate-500">Reason: {m.reason}</span>}
+                      <span className="ml-auto flex gap-1">{chips(m.sources)}</span>
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
+
+          {!ro && (
+            <section className="border-t border-slate-100 pt-2">
+              <button type="button" onClick={() => setSafetyOpen(!safetyOpen)} disabled={critical > 0} aria-expanded={showSafety}
+                className="flex w-full items-center gap-1.5 text-sm font-semibold text-slate-900 disabled:cursor-default">
+                {showSafety ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                Safety check
+                <span className={`font-normal ${critical ? "text-red-700" : warnings ? "text-amber-700" : "text-emerald-700"}`}>· {safetySummary}</span>
+              </button>
+              {showSafety && <div className="mt-2"><SafetyAlerts alerts={alerts} title="Safety check (with ticked changes applied)" /></div>}
+            </section>
           )}
         </div>
 
-        {SOAP_KEYS.map(({ key, label }) => (
-          <section key={key} className="space-y-2">
-            <h2 className="text-sm font-semibold text-slate-900">{label}</h2>
-            {soap[key].length === 0 && <p className="text-sm italic text-slate-400">Not discussed</p>}
-            {soap[key].map((x, i) => (
-              <div key={i} className="rounded-lg border border-slate-200 p-2">
-                <textarea value={x.text} disabled={ro} rows={Math.max(1, Math.ceil(x.text.length / 55))}
-                  onChange={(e) => setText(key, i, e.target.value)}
-                  className="w-full resize-none rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 disabled:border-transparent disabled:bg-transparent" />
-                <div className="mt-1 flex items-center gap-1">
-                  {x.sources.length ? chips(x.sources) : <span className="text-xs text-slate-400">no source</span>}
-                  {!ro && (
-                    <button type="button" aria-label="Delete statement" onClick={() => setSoap({ ...soap, [key]: soap[key].filter((_, j) => j !== i) })}
-                      className="ml-auto text-slate-400 hover:text-red-600"><Trash2 size={15} /></button>
-                  )}
-                </div>
-              </div>
-            ))}
-            {!ro && (
-              <button type="button" onClick={() => setSoap({ ...soap, [key]: [...soap[key], { text: "", sources: [] }] })}
-                className="flex items-center gap-1 text-sm text-teal-700"><Plus size={14} /> Add statement</button>
-            )}
-          </section>
-        ))}
-
-        {p.initial.not_discussed.length > 0 && (
-          <p className="text-xs text-slate-500"><strong>Not mentioned in the conversation:</strong> {p.initial.not_discussed.join(", ")}</p>
-        )}
-
-        <section className="space-y-2 border-t border-slate-100 pt-4">
-          <h2 className="text-sm font-semibold text-slate-900">Suggested medication updates</h2>
-          {meds.length === 0 ? (
-            <p className="text-sm italic text-slate-400">None mentioned</p>
-          ) : (
-            <>
-              <p className="text-xs text-slate-500">
-                {ro ? "Changes ticked at approval were applied to the medication list." : "Only ticked changes are applied to the medication list on approval."}
-              </p>
-              {meds.map((m, i) => (
-                <label key={i} className="flex items-start gap-2 rounded-lg border border-slate-200 p-2 text-sm text-slate-800">
-                  <input type="checkbox" className="mt-1" disabled={ro}
-                    checked={ro ? !!m.applied : ticked.has(i)}
-                    onChange={(e) => { const n = new Set(ticked); if (e.target.checked) n.add(i); else n.delete(i); setTicked(n); }} />
-                  <span className="flex-1">
-                    <span className={`mr-2 rounded px-1.5 py-0.5 text-xs font-medium uppercase ${ACTION_STYLE[m.action]}`}>{m.action}</span>
-                    <strong>{m.drug_name}</strong>
-                    {(m.new_dose || m.new_frequency) && <span className="text-slate-600"> · {[m.new_dose, m.new_frequency].filter(Boolean).join(" ")}</span>}
-                    {m.reason && <span className="block text-xs text-slate-500">Reason: {m.reason}</span>}
-                    <span className="mt-1 flex gap-1">{chips(m.sources)}</span>
-                  </span>
-                </label>
-              ))}
-            </>
-          )}
-        </section>
-
         {!ro && (
-          <section className="border-t border-slate-100 pt-4">
-            <SafetyAlerts alerts={alerts} title="Safety check (with ticked changes applied)" />
-          </section>
-        )}
-
-        {!ro && (
-          <div className="sticky bottom-0 z-10 -mx-5 -mb-5 space-y-2 rounded-b-2xl border-t border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
+          <div className="sticky bottom-0 z-10 shrink-0 space-y-1 rounded-b-2xl border-t border-slate-200 bg-white px-4 py-2">
             {!p.isDoctor && <p className="text-xs text-amber-700">Only a doctor can approve. Ask a doctor to review this note.</p>}
             {msg && <p className="text-xs text-slate-600">{msg}</p>}
             <div className="flex flex-wrap gap-2">
               <button disabled={!p.isDoctor || pending} onClick={() => run(() => approveNote(p.noteId, content(), [...ticked]))}
-                className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40">
+                className="rounded-lg bg-teal-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40">
                 Approve and save
               </button>
               <button disabled={pending} onClick={() => run(() => saveNoteDraft(p.noteId, content()), "Draft saved")}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Save draft</button>
+                className="rounded-lg border border-slate-300 px-4 py-1.5 text-sm text-slate-700 hover:bg-slate-50">Save draft</button>
               {p.canDiscard && (
                 <button disabled={pending} onClick={() => confirm("Discard this draft note?") && run(() => discardNote(p.noteId))}
-                  className="ml-auto rounded-lg border border-red-200 px-4 py-2 text-sm text-red-700 hover:bg-red-50">Discard</button>
+                  className="ml-auto rounded-lg border border-red-200 px-4 py-1.5 text-sm text-red-700 hover:bg-red-50">Discard</button>
               )}
             </div>
           </div>
