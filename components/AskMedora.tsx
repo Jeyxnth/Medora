@@ -46,8 +46,8 @@ export default function AskMedora({ patientId }: { patientId: string }) {
   const chip = "rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 hover:border-teal-400 hover:bg-teal-50 disabled:opacity-50";
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="mb-3 flex items-center gap-2 font-semibold text-slate-900"><Sparkles size={16} className="text-teal-600" /> Ask Medora</h2>
+    <div className="card p-5">
+      <h2 className="card-title mb-3 flex items-center gap-2"><Sparkles size={16} className="text-teal-600" /> Ask Medora</h2>
 
       <form onSubmit={(e) => { e.preventDefault(); send(question); }} className="flex gap-2">
         <input
@@ -58,7 +58,7 @@ export default function AskMedora({ patientId }: { patientId: string }) {
           className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
         />
         <button disabled={loading || !question.trim()} className="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50">
-          <Send size={15} /> Send
+          {loading ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />} Send
         </button>
         <button type="button" disabled={loading} onClick={() => run({ mode: "summary" })} className="rounded-lg border border-teal-600 px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50 disabled:opacity-50">
           Summarize patient
@@ -70,7 +70,10 @@ export default function AskMedora({ patientId }: { patientId: string }) {
       </div>
 
       {loading && (
-        <p className="mt-4 flex items-center gap-2 text-sm text-slate-600"><Loader2 size={16} className="animate-spin" /> Reading the records…</p>
+        <div className="mt-4 space-y-2" role="status">
+          <p className="flex items-center gap-2 text-sm text-slate-600"><Loader2 size={16} className="animate-spin text-teal-600" /> Reading approved records...</p>
+          <div className="animate-pulse space-y-2"><div className="h-3 w-11/12 rounded bg-slate-200" /><div className="h-3 w-3/4 rounded bg-slate-200" /><div className="h-3 w-1/2 rounded bg-slate-100" /></div>
+        </div>
       )}
       {error && !loading && <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
 

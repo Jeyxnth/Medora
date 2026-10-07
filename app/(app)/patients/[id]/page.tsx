@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, Upload, Mic, Phone } from "lucide-react";
+import { AlertTriangle, Upload, Mic, Phone, Pill } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import { buildTimeline } from "@/lib/timeline";
@@ -10,6 +10,7 @@ import { currentRole } from "@/lib/roles";
 import { ActionBadge, RoleBadge, formatTime } from "@/components/AuditBadge";
 import { checkSafety } from "@/lib/safety";
 import type { TrendLab } from "@/lib/trends";
+import Avatar from "@/components/Avatar";
 import Timeline from "@/components/Timeline";
 import SafetyAlerts from "@/components/SafetyAlerts";
 import TrendsCard from "@/components/TrendsCard";
@@ -57,7 +58,8 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
   });
   const allergyList = allergies.data ?? [];
   const alerts = checkSafety({ patientId: id, allergies: allergyList, activeMeds, labs: labs.data ?? [] });
-  const card = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
+  const card = "card p-5";
+  const chip = "flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-sm text-slate-700";
 
   return (
     <div className="space-y-4">
@@ -68,14 +70,17 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
       )}
 
       <div className={`${card} flex flex-wrap items-center justify-between gap-4`}>
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">{patient.name}</h1>
-          <p className="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-slate-500">
-            <span>{ageFromDob(patient.dob) ?? "?"} y</span>
-            <span>{patient.sex ?? "—"}</span>
-            <span>MRN {patient.mrn ?? "—"}</span>
-            <span className="flex items-center gap-1"><Phone size={13} />{patient.phone ?? "—"}</span>
-          </p>
+        <div className="flex items-center gap-4">
+          <Avatar name={patient.name} size="lg" />
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">{patient.name}</h1>
+            <p className="mt-2 flex flex-wrap items-center gap-2">
+              <span className={chip}>{ageFromDob(patient.dob) ?? "?"} y</span>
+              <span className={chip}>{patient.sex ?? "—"}</span>
+              <span className={chip}>MRN {patient.mrn ?? "—"}</span>
+              <span className={chip}><Phone size={13} />{patient.phone ?? "—"}</span>
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           {can(role, "upload") && <Link href={`/patients/${id}/upload`} className="flex items-center gap-1.5 rounded-lg border border-teal-600 px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50">
@@ -93,61 +98,67 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
           <div><strong>Allergies: </strong>{allergyList.map((a) => `${a.substance}${a.reaction ? ` (${a.reaction})` : ""}`).join(", ")}</div>
         </div>
       ) : (
-        <p className="px-1 text-sm text-slate-400">No known allergies</p>
+        <p className="px-1 text-sm text-slate-500">No known allergies</p>
       )}
 
       <div className={card}>
         <SafetyAlerts alerts={alerts} />
       </div>
 
-      {can(role, "ask") && <AskMedora patientId={id} />}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="min-w-0 space-y-4 lg:col-span-2">
+          <TrendsCard patientId={id} labs={(labs.data ?? []) as TrendLab[]} />
 
-      <div className={card}>
-        <h2 className="mb-3 font-semibold text-slate-900">Current medications</h2>
-        {activeMeds.length === 0 ? (
-          <p className="text-sm text-slate-500">No active medications.</p>
-        ) : (
-          <ul className="divide-y divide-slate-100 text-sm">
-            {activeMeds.map((m) => (
-              <li key={m.id} className="flex justify-between py-2">
-                <span className="font-medium text-slate-800">{m.drug_name}</span>
-                <span className="text-slate-500">{[m.dose, m.frequency].filter(Boolean).join(" · ")}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+          {can(role, "ask") && <AskMedora patientId={id} />}
 
-      <TrendsCard patientId={id} labs={(labs.data ?? []) as TrendLab[]} />
-
-      <div id="timeline" className={card}>
-        <h2 className="mb-3 font-semibold text-slate-900">Timeline</h2>
-        <Timeline items={items} />
-      </div>
-
-      {can(role, "view_audit") && (
-        <div className={card}>
-          <h2 className="mb-3 text-sm font-semibold text-slate-900">Access log</h2>
-          {accessLog.length === 0 ? (
-            <p className="text-sm text-slate-500">No entries.</p>
-          ) : (
-            <ul className="divide-y divide-slate-100 text-sm text-slate-700">
-              {accessLog.map((a) => {
-                const u = userNames.get(a.user_id);
-                return (
-                  <li key={a.id} className="flex flex-wrap items-center gap-2 py-1.5">
-                    <span className="w-40 text-xs text-slate-500">{formatTime(a.created_at)}</span>
-                    <span>{u?.full_name ?? "Unknown"}</span>
-                    {u && <RoleBadge role={u.role} />}
-                    <ActionBadge action={a.action} />
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          <Link href={`/audit?patient=${id}`} className="mt-2 inline-block text-xs text-teal-700 hover:underline">Full audit log →</Link>
+          <div id="timeline" className={card}>
+            <h2 className="card-title mb-3">Timeline</h2>
+            <Timeline items={items} />
+          </div>
         </div>
-      )}
+
+        <div className="min-w-0 space-y-4">
+          <div className={card}>
+            <h2 className="card-title mb-3 flex items-center gap-2"><Pill size={16} className="text-emerald-600" /> Current medications</h2>
+            {activeMeds.length === 0 ? (
+              <p className="text-sm text-slate-500">No active medications.</p>
+            ) : (
+              <ul className="divide-y divide-slate-100 text-sm">
+                {activeMeds.map((m) => (
+                  <li key={m.id} className="flex flex-col py-2">
+                    <span className="font-medium text-slate-800">{m.drug_name}</span>
+                    <span className="text-slate-500">{[m.dose, m.frequency].filter(Boolean).join(" · ")}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {can(role, "view_audit") && (
+            <div className={card}>
+              <h2 className="card-title mb-3">Access log</h2>
+              {accessLog.length === 0 ? (
+                <p className="text-sm text-slate-500">No entries.</p>
+              ) : (
+                <ul className="divide-y divide-slate-100 text-sm text-slate-700">
+                  {accessLog.map((a) => {
+                    const u = userNames.get(a.user_id);
+                    return (
+                      <li key={a.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 py-2">
+                        <span className="w-full text-xs text-slate-500">{formatTime(a.created_at)}</span>
+                        <span>{u?.full_name ?? "Unknown"}</span>
+                        {u && <RoleBadge role={u.role} />}
+                        <ActionBadge action={a.action} />
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              <Link href={`/audit?patient=${id}`} className="mt-2 inline-block text-xs text-teal-700 hover:underline">Full audit log →</Link>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

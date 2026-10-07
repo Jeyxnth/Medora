@@ -78,9 +78,9 @@ export default function UploadForm({ patientId }: { patientId: string }) {
 
   if (busy) {
     return (
-      <ol className="space-y-3 py-4">
+      <ol className="space-y-2 py-2">
         {STEPS.map((label, i) => (
-          <li key={label} className={`flex items-center gap-3 text-sm ${i <= step ? "text-slate-900" : "text-slate-400"}`}>
+          <li key={label} className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm ${i < step ? "border-teal-200 bg-teal-50 text-teal-800" : i === step ? "border-teal-400 bg-white font-medium text-slate-900 shadow-sm" : "border-slate-200 text-slate-400"}`}>
             {i < step ? <Check size={18} className="text-teal-600" /> : i === step ? <Loader2 size={18} className="animate-spin text-teal-600" /> : <span className="h-[18px] w-[18px] rounded-full border border-slate-300" />}
             {label}
           </li>

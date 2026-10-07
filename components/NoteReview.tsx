@@ -72,7 +72,7 @@ export default function NoteReview(p: {
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="card p-4">
         <h2 className="mb-3 text-sm font-semibold text-slate-900">Transcript</h2>
         <div ref={transcript} className="max-h-[75vh] space-y-2 overflow-auto pr-1 text-sm">
           {p.initial.segments.map((s) => (
@@ -87,7 +87,7 @@ export default function NoteReview(p: {
         </div>
       </div>
 
-      <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="space-y-4 card p-5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">SOAP note</span>
           {ro ? (
@@ -160,7 +160,7 @@ export default function NoteReview(p: {
         )}
 
         {!ro && (
-          <div className="space-y-2 border-t border-slate-100 pt-4">
+          <div className="sticky bottom-0 z-10 -mx-5 -mb-5 space-y-2 rounded-b-2xl border-t border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
             {!p.isDoctor && <p className="text-xs text-amber-700">Only a doctor can approve. Ask a doctor to review this note.</p>}
             {msg && <p className="text-xs text-slate-600">{msg}</p>}
             <div className="flex flex-wrap gap-2">

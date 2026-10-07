@@ -34,7 +34,7 @@ export default async function AuditPage(props: PageProps<"/audit">) {
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold text-slate-900">Audit log</h1>
 
-      <form className="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <form className="flex flex-wrap items-end gap-3 card p-4">
         <label className="text-xs font-medium text-slate-600">Action
           <select name="action" defaultValue={action} className={`${select} mt-1 block`}>
             <option value="">All</option>
@@ -57,7 +57,7 @@ export default async function AuditPage(props: PageProps<"/audit">) {
         <Link href="/audit" className="py-2 text-sm text-teal-700 hover:underline">Reset</Link>
       </form>
 
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-x-auto card">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr><th className="px-4 py-2">Time</th><th className="px-4 py-2">User</th><th className="px-4 py-2">Action</th><th className="px-4 py-2">Entity</th><th className="px-4 py-2">Patient</th></tr>

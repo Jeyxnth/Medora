@@ -121,7 +121,7 @@ export default function ReviewForm(p: {
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="card p-3">
         <div className="mb-2 flex justify-end gap-1">
           <button onClick={() => setZoom(Math.max(0.5, zoom - 0.25))} className="rounded border border-slate-300 p-1.5 hover:bg-slate-50" aria-label="Zoom out"><ZoomOut size={16} /></button>
           <button onClick={() => setZoom(Math.min(3, zoom + 0.25))} className="rounded border border-slate-300 p-1.5 hover:bg-slate-50" aria-label="Zoom in"><ZoomIn size={16} /></button>
@@ -136,7 +136,7 @@ export default function ReviewForm(p: {
         </div>
       </div>
 
-      <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="space-y-4 card p-5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
             {isLab ? "Lab report" : p.docType === "prescription" ? "Prescription" : "Other document"}
@@ -242,7 +242,7 @@ export default function ReviewForm(p: {
         )}
 
         {!ro && (
-          <div className="space-y-2 border-t border-slate-100 pt-4">
+          <div className="sticky bottom-0 z-10 -mx-5 -mb-5 space-y-2 rounded-b-2xl border-t border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
             {blocker && <p className="text-xs text-amber-700">{blocker}</p>}
             {msg && <p className="text-xs text-slate-600">{msg}</p>}
             <div className="flex flex-wrap gap-2">

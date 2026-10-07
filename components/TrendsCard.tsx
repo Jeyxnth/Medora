@@ -27,9 +27,9 @@ function Chart({ test, labs, patientId }: { test: string; labs: TrendLab[]; pati
   const last = labs[labs.length - 1];
 
   return (
-    <div className="rounded-xl border border-slate-200 p-3">
+    <div className="rounded-xl border border-slate-200 p-4">
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-sm font-medium text-slate-900">{test}</h3>
+        <h3 className="text-sm font-semibold text-slate-900">{test}</h3>
         <span className="text-xs text-slate-500">
           Latest {last.value} {last.unit}
           {last.document_id && <> · <Link href={`/patients/${patientId}/documents/${last.document_id}`} className="text-teal-700 hover:underline">source</Link></>}
@@ -84,10 +84,10 @@ export default function TrendsCard({ patientId, labs }: { patientId: string; lab
     setSelected((s) => (s.includes(t) ? s.filter((x) => x !== t) : [...s, t].slice(-MAX_CHARTS)));
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="mb-3 font-semibold text-slate-900">Trends</h2>
+    <div className="card p-5">
+      <h2 className="card-title mb-3">Trends</h2>
       {tests.length === 0 ? (
-        <p className="text-sm text-slate-500">Trends appear once a test has two or more results.</p>
+        <p className="rounded-lg bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">Trends appear once a test has two or more results.</p>
       ) : (
         <>
           {insights.length > 0 && (
@@ -110,7 +110,7 @@ export default function TrendsCard({ patientId, labs }: { patientId: string; lab
           {selected.length === 0 ? (
             <p className="text-sm text-slate-500">Choose a test above (up to {MAX_CHARTS} at a time).</p>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {selected.map((t) => <Chart key={t} test={t} labs={series.get(t)!} patientId={patientId} />)}
             </div>
           )}

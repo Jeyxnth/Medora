@@ -218,13 +218,13 @@ export default function ConsultForm({ patientId }: { patientId: string }) {
       </fieldset>
 
       {busy && (
-        <ol className="space-y-2 rounded-xl border border-slate-200 p-4 text-sm">
+        <ol className="space-y-2 text-sm">
           {STEPS.map((label, i) => {
             if (mode === "paste" && i === 0) return null;
             const done = step > i;
             return (
-              <li key={label} className={`flex items-center gap-2 ${done ? "text-emerald-700" : step === i ? "font-medium text-slate-900" : "text-slate-400"}`}>
-                {done ? <Check size={16} /> : step === i ? <Loader2 size={16} className="animate-spin" /> : <span className="h-4 w-4 rounded-full border border-slate-300" />}
+              <li key={label} className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 ${done ? "border-teal-200 bg-teal-50 text-teal-800" : step === i ? "border-teal-400 bg-white font-medium text-slate-900 shadow-sm" : "border-slate-200 text-slate-400"}`}>
+                {done ? <Check size={16} className="text-teal-600" /> : step === i ? <Loader2 size={16} className="animate-spin text-teal-600" /> : <span className="h-4 w-4 rounded-full border border-slate-300" />}
                 {label}
               </li>
             );
