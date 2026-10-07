@@ -20,4 +20,4 @@ export function RoleBadge({ role }: { role: string }) {
   return <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs font-semibold capitalize text-teal-700 ring-1 ring-teal-200">{role}</span>;
 }
 
-export const formatTime = (t: string) => `${new Date(t).toISOString().slice(0, 16).replace("T", " ")} UTC`;
+export { formatDateTime as formatTime } from "@/lib/format";

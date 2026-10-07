@@ -3,12 +3,13 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { CartesianGrid, Line, LineChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { TrendingUp } from "lucide-react";
+import { formatDate } from "@/lib/format";
 import { isOutOfRange } from "@/lib/timeline";
 import { DEFAULT_TESTS, groupSeries, trendInsights, type TrendLab } from "@/lib/trends";
 
 const MAX_CHARTS = 3;
 const day = (t: number) => new Date(t).toISOString().slice(0, 10);
-const shortDate = (t: number) => new Date(t).toLocaleDateString(undefined, { month: "short", year: "2-digit" });
+const shortDate = (t: number) => formatDate(new Date(t), "month");
 
 type Point = { t: number; value: number; unit: string | null; bad: boolean; docId: string | null };
 

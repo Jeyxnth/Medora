@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Stethoscope, FlaskConical, Pill, FileText, NotebookPen, ChevronDown } from "lucide-react";
+import { formatDate } from "@/lib/format";
 import { isOutOfRange, formatRange, type TimelineItem, type TimelineType } from "@/lib/timeline";
 
 const TYPES: Record<TimelineType, { label: string; icon: typeof Pill; color: string }> = {
@@ -98,7 +99,7 @@ export default function Timeline({ items }: { items: TimelineItem[] }) {
         {[...groups].map(([date, list]) => (
           <section key={date}>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              {new Date(date + "T00:00:00").toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+              {formatDate(date)}
             </h3>
             <div className="relative space-y-3 before:absolute before:left-4 before:top-0 before:h-full before:w-px before:bg-slate-200">
               {list.map((i) => <Item key={i.id} item={i} />)}
