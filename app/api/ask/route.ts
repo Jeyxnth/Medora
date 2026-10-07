@@ -5,6 +5,7 @@ import { can } from "@/lib/permissions";
 import { currentRole } from "@/lib/roles";
 import { generateJSON } from "@/lib/llm";
 import { buildPatientContext, type Source } from "@/lib/records";
+import { stripSourceIds, verifyStatement } from "@/lib/verify-ask";
 
 export const maxDuration = 60;
 
@@ -39,16 +40,12 @@ Rules:
 - Answer ONLY from the provided records. Never use outside medical knowledge to fill gaps in the records.
 - Every statement must cite at least one source id (like L12, N2, M4) taken from the list. Cite the lines the statement is based on.
 - If the records do not contain the answer, set not_found to true and say in one statement what is missing. Never guess.
+- Do not write source ids in the statement text; put them only in the sources array.
 - Keep each statement short and include the values and dates exactly as written in the records. Copy numbers exactly; do not compute new numbers or counts.
 - No treatment recommendations and no diagnoses that are not already in the records.
 - follow_ups: up to 3 short, useful follow-up questions the records could answer. Empty if not_found.`;
 
 const SUMMARY_PROMPT = `Summarize this patient in 6 to 10 short statements covering, in order: who the patient is, active problems evident from the records, current medications, allergies, key lab trends with the first and latest values (with dates), and recent encounters. Only mention what the records show.`;
-
-// Numbers as normalised tokens, so "03" and "3", "1.50" and "1.5" count as the same.
-function numbers(s: string): string[] {
-  return (s.replace(/(\d),(?=\d{3}\b)/g, "$1").match(/\d+(?:\.\d+)?/g) ?? []).map((t) => String(Number(t)));
-}
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -82,12 +79,8 @@ export async function POST(req: Request) {
   const answer: AskStatement[] = (raw.answer ?? []).map((s) => {
     const valid = [...new Set((s.sources ?? []).filter((id) => sources.has(id)))];
     for (const id of valid) used[id] = { id, label: sources.get(id)!.label, href: sources.get(id)!.href };
-    if (!valid.length) return { text: s.text, sources: [], verified: false, reason: "no valid source cited" };
-    const cited = new Set(valid.flatMap((id) => numbers(`${sources.get(id)!.date ?? ""} ${sources.get(id)!.text}`)));
-    if (numbers(s.text).some((x) => !cited.has(x))) {
-      return { text: s.text, sources: valid, verified: false, reason: "number not found in cited source" };
-    }
-    return { text: s.text, sources: valid, verified: true };
+    if (!valid.length) return { text: stripSourceIds(s.text, sources), sources: [], verified: false, reason: "no valid source cited" };
+    return { sources: valid, ...verifyStatement(s.text, valid, sources) };
   });
 
   await logAudit({ action: "ask", entityType: "patient", entityId: patientId, patientId });
