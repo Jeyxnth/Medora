@@ -10,6 +10,7 @@ import type { TrendLab } from "@/lib/trends";
 import Timeline from "@/components/Timeline";
 import SafetyAlerts from "@/components/SafetyAlerts";
 import TrendsCard from "@/components/TrendsCard";
+import AskMedora from "@/components/AskMedora";
 
 export default async function PatientPage(props: PageProps<"/patients/[id]">) {
   const { id } = await props.params;
@@ -85,6 +86,8 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
         <SafetyAlerts alerts={alerts} />
       </div>
 
+      <AskMedora patientId={id} />
+
       <div className={card}>
         <h2 className="mb-3 font-semibold text-slate-900">Current medications</h2>
         {activeMeds.length === 0 ? (
@@ -103,7 +106,7 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
 
       <TrendsCard patientId={id} labs={(labs.data ?? []) as TrendLab[]} />
 
-      <div className={card}>
+      <div id="timeline" className={card}>
         <h2 className="mb-3 font-semibold text-slate-900">Timeline</h2>
         <Timeline items={items} />
       </div>
