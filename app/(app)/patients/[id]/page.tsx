@@ -5,6 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import { buildTimeline } from "@/lib/timeline";
 import { ageFromDob } from "@/lib/utils";
+import { can } from "@/lib/permissions";
+import { currentRole } from "@/lib/roles";
+import { ActionBadge, RoleBadge, formatTime } from "@/components/AuditBadge";
 import { checkSafety } from "@/lib/safety";
 import type { TrendLab } from "@/lib/trends";
 import Timeline from "@/components/Timeline";
@@ -28,6 +31,17 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
     supabase.from("documents").select("*").eq("patient_id", id),
     supabase.from("clinical_notes").select("*").eq("patient_id", id),
   ]);
+
+  const role = await currentRole(supabase);
+  let accessLog: { id: string; action: string; created_at: string; user_id: string }[] = [];
+  const userNames = new Map<string, { full_name: string; role: string }>();
+  if (can(role, "view_audit")) {
+    const { data } = await supabase.from("audit_log").select("id, action, created_at, user_id")
+      .eq("patient_id", id).order("created_at", { ascending: false }).limit(10);
+    accessLog = data ?? [];
+    const { data: profs } = await supabase.from("profiles").select("id, full_name, role");
+    for (const p of profs ?? []) userNames.set(p.id, p);
+  }
 
   await logAudit({ action: "view", entityType: "patient", entityId: id, patientId: id });
 
@@ -64,12 +78,12 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href={`/patients/${id}/upload`} className="flex items-center gap-1.5 rounded-lg border border-teal-600 px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50">
+          {can(role, "upload") && <Link href={`/patients/${id}/upload`} className="flex items-center gap-1.5 rounded-lg border border-teal-600 px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50">
             <Upload size={16} /> Upload report
-          </Link>
-          <Link href={`/patients/${id}/consult`} className="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-2 text-sm font-medium text-white hover:bg-teal-700">
+          </Link>}
+          {can(role, "record_consultation") && <Link href={`/patients/${id}/consult`} className="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-2 text-sm font-medium text-white hover:bg-teal-700">
             <Mic size={16} /> New consultation
-          </Link>
+          </Link>}
         </div>
       </div>
 
@@ -86,7 +100,7 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
         <SafetyAlerts alerts={alerts} />
       </div>
 
-      <AskMedora patientId={id} />
+      {can(role, "ask") && <AskMedora patientId={id} />}
 
       <div className={card}>
         <h2 className="mb-3 font-semibold text-slate-900">Current medications</h2>
@@ -110,6 +124,30 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
         <h2 className="mb-3 font-semibold text-slate-900">Timeline</h2>
         <Timeline items={items} />
       </div>
+
+      {can(role, "view_audit") && (
+        <div className={card}>
+          <h2 className="mb-3 text-sm font-semibold text-slate-900">Access log</h2>
+          {accessLog.length === 0 ? (
+            <p className="text-sm text-slate-500">No entries.</p>
+          ) : (
+            <ul className="divide-y divide-slate-100 text-sm text-slate-700">
+              {accessLog.map((a) => {
+                const u = userNames.get(a.user_id);
+                return (
+                  <li key={a.id} className="flex flex-wrap items-center gap-2 py-1.5">
+                    <span className="w-40 text-xs text-slate-500">{formatTime(a.created_at)}</span>
+                    <span>{u?.full_name ?? "Unknown"}</span>
+                    {u && <RoleBadge role={u.role} />}
+                    <ActionBadge action={a.action} />
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <Link href={`/audit?patient=${id}`} className="mt-2 inline-block text-xs text-teal-700 hover:underline">Full audit log →</Link>
+        </div>
+      )}
     </div>
   );
 }

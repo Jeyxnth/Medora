@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { can } from "@/lib/permissions";
 import type { NoteContent } from "@/lib/scribe";
 import { loadSafetyContext } from "@/lib/safety-context";
 import NoteReview from "@/components/NoteReview";
@@ -25,7 +26,8 @@ export default async function NotePage(props: PageProps<"/patients/[id]/notes/[n
       <NoteReview
         noteId={noteId}
         approved={note.status === "approved"}
-        isDoctor={profile?.role === "doctor"}
+        isDoctor={can(profile?.role, "approve")}
+        canDiscard={can(profile?.role, "discard")}
         initial={note.content as NoteContent}
         patientId={id}
         safety={safety}

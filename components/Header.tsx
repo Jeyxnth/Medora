@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { can } from "@/lib/permissions";
 import LogoutButton from "./LogoutButton";
 
 export default async function Header() {
@@ -14,6 +15,7 @@ export default async function Header() {
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <Link href="/patients" className="text-xl font-bold tracking-tight text-teal-700">Medora</Link>
         <div className="flex items-center gap-3 text-sm">
+          {can(profile?.role, "view_audit") && <Link href="/audit" className="font-medium text-slate-600 hover:text-teal-700">Audit log</Link>}
           <span className="font-medium text-slate-800">{profile?.full_name ?? user?.email}</span>
           {profile && (
             <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold capitalize text-teal-700 ring-1 ring-teal-200">

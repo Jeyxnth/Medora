@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx scripts/seed.ts",
-    "test-extract": "tsx scripts/test-extract.ts"
+    "test-extract": "tsx scripts/test-extract.ts",
+    "permissions-table": "tsx scripts/permissions-table.ts"
   },
   "dependencies": {
     "@google/genai": "^2.27.0",

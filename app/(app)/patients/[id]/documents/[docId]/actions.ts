@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { can } from "@/lib/permissions";
 import { canonicalName, computeFlag } from "@/lib/validate";
 import type { Extraction } from "@/lib/extract";
 
@@ -18,7 +19,8 @@ async function load(docId: string) {
 }
 
 export async function saveDraft(docId: string, data: Extraction): Promise<{ error?: string }> {
-  const { supabase, doc } = await load(docId);
+  const { supabase, role, doc } = await load(docId);
+  if (!can(role, "edit_draft")) return { error: "You cannot edit drafts." };
   if (doc.status !== "draft") return { error: "Document is already approved" };
   const { error } = await supabase.from("documents").update({ extracted_json: data }).eq("id", docId);
   if (error) return { error: error.message };
@@ -28,7 +30,7 @@ export async function saveDraft(docId: string, data: Extraction): Promise<{ erro
 
 export async function approveDocument(docId: string, data: Extraction): Promise<{ error?: string }> {
   const { supabase, role, doc } = await load(docId);
-  if (role !== "doctor") return { error: "Only a doctor can approve." };
+  if (!can(role, "approve")) return { error: "Only a doctor can approve." };
   if (doc.status !== "draft") return { error: "Document is already approved" };
   if (!data.document_date) return { error: "Document date is required." };
 
@@ -75,7 +77,8 @@ export async function approveDocument(docId: string, data: Extraction): Promise<
 }
 
 export async function discardDocument(docId: string): Promise<{ error?: string }> {
-  const { supabase, doc } = await load(docId);
+  const { supabase, role, doc } = await load(docId);
+  if (!can(role, "discard")) return { error: "Only a doctor can discard." };
   if (doc.status !== "draft") return { error: "Approved documents cannot be discarded" };
   if (doc.file_path) await supabase.storage.from("documents").remove([doc.file_path]);
   const { error } = await supabase.from("documents").delete().eq("id", docId);

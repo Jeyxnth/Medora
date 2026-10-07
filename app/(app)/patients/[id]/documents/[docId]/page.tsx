@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { can } from "@/lib/permissions";
 import { namesMatch } from "@/lib/utils";
 import type { Extraction } from "@/lib/extract";
 import { loadSafetyContext } from "@/lib/safety-context";
@@ -36,7 +37,8 @@ export default async function DocumentPage(props: PageProps<"/patients/[id]/docu
           docId={docId}
           docType={doc.doc_type}
           approved={doc.status === "approved"}
-          isDoctor={profile?.role === "doctor"}
+          isDoctor={can(profile?.role, "approve")}
+          canDiscard={can(profile?.role, "discard")}
           imageUrl={signed?.signedUrl ?? null}
           initial={extraction}
           patientName={patient?.name ?? ""}

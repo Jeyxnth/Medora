@@ -13,7 +13,7 @@ const ACTION_STYLE: Record<MedChange["action"], string> = {
 };
 
 export default function NoteReview(p: {
-  noteId: string; approved: boolean; isDoctor: boolean; initial: NoteContent; patientId: string;
+  noteId: string; approved: boolean; isDoctor: boolean; canDiscard: boolean; initial: NoteContent; patientId: string;
   safety: { allergies: Allergy[]; activeMeds: Med[]; labs: SafetyLab[] };
 }) {
   const ro = p.approved;
@@ -170,8 +170,10 @@ export default function NoteReview(p: {
               </button>
               <button disabled={pending} onClick={() => run(() => saveNoteDraft(p.noteId, content()), "Draft saved")}
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Save draft</button>
-              <button disabled={pending} onClick={() => confirm("Discard this draft note?") && run(() => discardNote(p.noteId))}
-                className="ml-auto rounded-lg border border-red-200 px-4 py-2 text-sm text-red-700 hover:bg-red-50">Discard</button>
+              {p.canDiscard && (
+                <button disabled={pending} onClick={() => confirm("Discard this draft note?") && run(() => discardNote(p.noteId))}
+                  className="ml-auto rounded-lg border border-red-200 px-4 py-2 text-sm text-red-700 hover:bg-red-50">Discard</button>
+              )}
             </div>
           </div>
         )}

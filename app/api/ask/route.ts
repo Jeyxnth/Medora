@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { can } from "@/lib/permissions";
+import { currentRole } from "@/lib/roles";
 import { generateJSON } from "@/lib/llm";
 import { buildPatientContext, type Source } from "@/lib/records";
 
@@ -52,6 +54,8 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+
+  if (!can(await currentRole(supabase), "ask")) return NextResponse.json({ error: "Not allowed" }, { status: 403 });
 
   const body = await req.json().catch(() => null);
   const patientId = String(body?.patientId ?? "");

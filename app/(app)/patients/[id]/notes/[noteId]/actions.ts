@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { can } from "@/lib/permissions";
 import { normalizeDrug } from "@/lib/safety";
 import type { NoteContent } from "@/lib/scribe";
 
@@ -16,7 +17,8 @@ async function load(noteId: string) {
 }
 
 export async function saveNoteDraft(noteId: string, content: NoteContent): Promise<{ error?: string }> {
-  const { supabase, note } = await load(noteId);
+  const { supabase, profile, note } = await load(noteId);
+  if (!can(profile?.role, "edit_draft")) return { error: "You cannot edit drafts." };
   if (note.status !== "draft") return { error: "Note is already approved" };
   const { error } = await supabase.from("clinical_notes").update({ content }).eq("id", noteId);
   if (error) return { error: error.message };
@@ -26,7 +28,7 @@ export async function saveNoteDraft(noteId: string, content: NoteContent): Promi
 
 export async function approveNote(noteId: string, content: NoteContent, tickedIdx: number[]): Promise<{ error?: string }> {
   const { supabase, user, profile, note } = await load(noteId);
-  if (profile?.role !== "doctor") return { error: "Only a doctor can approve." };
+  if (!can(profile?.role, "approve")) return { error: "Only a doctor can approve." };
   if (note.status !== "draft") return { error: "Note is already approved" };
 
   const patientId = note.patient_id as string;
@@ -90,7 +92,8 @@ export async function approveNote(noteId: string, content: NoteContent, tickedId
 }
 
 export async function discardNote(noteId: string): Promise<{ error?: string }> {
-  const { supabase, note } = await load(noteId);
+  const { supabase, profile, note } = await load(noteId);
+  if (!can(profile?.role, "discard")) return { error: "Only a doctor can discard." };
   if (note.status !== "draft") return { error: "Approved notes cannot be discarded" };
   const { error } = await supabase.from("clinical_notes").delete().eq("id", noteId);
   if (error) return { error: error.message };

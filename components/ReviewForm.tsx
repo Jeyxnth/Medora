@@ -42,7 +42,7 @@ const inputCls = "w-full rounded border border-slate-300 bg-white px-2 py-1 text
 const FLAG_STYLE: Record<string, string> = { H: "text-red-600", L: "text-red-600", N: "text-slate-500" };
 
 export default function ReviewForm(p: {
-  docId: string; docType: string; approved: boolean; isDoctor: boolean; imageUrl: string | null;
+  docId: string; docType: string; approved: boolean; isDoctor: boolean; canDiscard: boolean; imageUrl: string | null;
   initial: Extraction; patientName: string; nameMismatch: boolean; patientId: string;
   safety: { allergies: Allergy[]; activeMeds: Med[]; labs: SafetyLab[] };
 }) {
@@ -252,9 +252,11 @@ export default function ReviewForm(p: {
               <button disabled={pending} onClick={() => run(() => saveDraft(p.docId, data()), "Draft saved")} className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
                 Save draft
               </button>
-              <button disabled={pending} onClick={() => confirm("Discard this document and its file?") && run(() => discardDocument(p.docId))} className="ml-auto rounded-lg border border-red-200 px-4 py-2 text-sm text-red-700 hover:bg-red-50">
-                Discard
-              </button>
+              {p.canDiscard && (
+                <button disabled={pending} onClick={() => confirm("Discard this document and its file?") && run(() => discardDocument(p.docId))} className="ml-auto rounded-lg border border-red-200 px-4 py-2 text-sm text-red-700 hover:bg-red-50">
+                  Discard
+                </button>
+              )}
             </div>
           </div>
         )}

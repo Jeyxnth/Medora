@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { can } from "@/lib/permissions";
+import { currentRole } from "@/lib/roles";
 import { GROQ_WHISPER_MODEL } from "@/lib/config";
 import { ageFromDob } from "@/lib/utils";
 import { draftNote, splitTranscript, transcriptText } from "@/lib/scribe";
@@ -31,6 +33,8 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+
+  if (!can(await currentRole(supabase), "record_consultation")) return NextResponse.json({ error: "Not allowed" }, { status: 403 });
 
   const form = await req.formData().catch(() => null);
   const patientId = String(form?.get("patientId") ?? "");
