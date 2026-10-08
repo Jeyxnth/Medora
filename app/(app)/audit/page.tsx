@@ -5,7 +5,7 @@ import { can } from "@/lib/permissions";
 import { currentRole } from "@/lib/roles";
 import { ActionBadge, RoleBadge, formatTime } from "@/components/AuditBadge";
 
-const ACTIONS = ["view", "ask", "edit", "update", "extract", "create_note", "approve", "discard"];
+const ACTIONS = ["view", "ask", "edit", "update", "extract", "create_note", "approve", "discard", "task.draft_created", "task.confirm", "task.dismiss", "task.complete", "brief.generate"];
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
 
 export default async function AuditPage(props: PageProps<"/audit">) {

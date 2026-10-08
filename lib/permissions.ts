@@ -10,6 +10,9 @@ export const PERMISSIONS = {
   record_consultation: { label: "Record consultations", roles: ["doctor", "nurse"] },
   ask: { label: "Ask Medora", roles: ["doctor", "nurse"] },
   view_audit: { label: "View the audit log", roles: ["doctor"] },
+  "task.confirm": { label: "Confirm follow-up tasks", roles: ["doctor"] },
+  "task.dismiss": { label: "Dismiss follow-up tasks", roles: ["doctor"] },
+  "task.complete": { label: "Mark tasks done", roles: ["doctor", "nurse"] },
 } as const satisfies Record<string, { label: string; roles: readonly Role[] }>;
 
 export type Action = keyof typeof PERMISSIONS;

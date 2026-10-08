@@ -7,6 +7,11 @@ const COLORS: Record<string, string> = {
   create_note: "bg-violet-50 text-violet-800 ring-violet-200",
   approve: "bg-emerald-50 text-emerald-800 ring-emerald-200",
   discard: "bg-red-50 text-red-800 ring-red-200",
+  "task.draft_created": "bg-violet-50 text-violet-800 ring-violet-200",
+  "task.confirm": "bg-emerald-50 text-emerald-800 ring-emerald-200",
+  "task.dismiss": "bg-red-50 text-red-800 ring-red-200",
+  "task.complete": "bg-emerald-50 text-emerald-800 ring-emerald-200",
+  "brief.generate": "bg-sky-50 text-sky-800 ring-sky-200",
 };
 
 export function ActionBadge({ action }: { action: string | null }) {

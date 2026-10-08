@@ -17,6 +17,9 @@ An AI-native EMR demo built for The Industry Games 2026 (District 04). Synthetic
 | Record consultations | yes | yes |
 | Ask Medora | yes | yes |
 | View the audit log | yes | - |
+| Confirm follow-up tasks | yes | - |
+| Dismiss follow-up tasks | yes | - |
+| Mark tasks done | yes | yes |
 <!-- permissions:end -->
 
 ## Credits

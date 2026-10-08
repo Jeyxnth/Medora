@@ -5,6 +5,7 @@ import { logAudit } from "@/lib/audit";
 import { can } from "@/lib/permissions";
 import { normalizeDrug } from "@/lib/safety";
 import type { NoteContent } from "@/lib/scribe";
+import { draftTasksFromPlan } from "@/lib/tasks";
 
 async function load(noteId: string) {
   const supabase = await createClient();
@@ -84,6 +85,7 @@ export async function approveNote(noteId: string, content: NoteContent, tickedId
 
   await logAudit({ action: "approve", entityType: "clinical_note", entityId: noteId, patientId });
   for (const id of touched) await logAudit({ action: "update", entityType: "medication", entityId: id, patientId });
+  await draftTasksFromPlan(supabase, { noteId, patientId, plan: content.soap.plan });
 
   const notice = skipped.length
     ? `Note approved. Not applied (no matching active medication): ${skipped.join(", ")}`

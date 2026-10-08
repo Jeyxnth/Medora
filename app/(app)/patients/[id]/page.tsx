@@ -15,6 +15,9 @@ import Timeline from "@/components/Timeline";
 import SafetyAlerts from "@/components/SafetyAlerts";
 import TrendsCard from "@/components/TrendsCard";
 import AskMedora from "@/components/AskMedora";
+import TasksCard from "@/components/TasksCard";
+import PreVisitBrief from "@/components/PreVisitBrief";
+import type { Task } from "@/lib/tasks";
 
 export default async function PatientPage(props: PageProps<"/patients/[id]">) {
   const { id } = await props.params;
@@ -24,13 +27,14 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
   const { data: patient } = await supabase.from("patients").select("*").eq("id", id).single();
   if (!patient) notFound();
 
-  const [allergies, encounters, labs, meds, documents, notes] = await Promise.all([
+  const [allergies, encounters, labs, meds, documents, notes, tasks] = await Promise.all([
     supabase.from("allergies").select("*").eq("patient_id", id),
     supabase.from("encounters").select("*").eq("patient_id", id),
     supabase.from("lab_results").select("*").eq("patient_id", id),
     supabase.from("medications").select("*").eq("patient_id", id),
     supabase.from("documents").select("*").eq("patient_id", id),
     supabase.from("clinical_notes").select("*").eq("patient_id", id),
+    supabase.from("tasks").select("*").eq("patient_id", id).order("created_at"),
   ]);
 
   const role = await currentRole(supabase);
@@ -56,6 +60,7 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
     documents: documents.data ?? [],
     notes: notes.data ?? [],
   });
+  const noteDates = Object.fromEntries((notes.data ?? []).map((n) => [n.id as string, String(n.created_at).slice(0, 10)]));
   const allergyList = allergies.data ?? [];
   const alerts = checkSafety({ patientId: id, allergies: allergyList, activeMeds, labs: labs.data ?? [] });
   const card = "card p-5";
@@ -82,7 +87,8 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <PreVisitBrief patientId={id} patientName={patient.name} />
           {can(role, "upload") && <Link href={`/patients/${id}/upload`} className="flex items-center gap-1.5 rounded-lg border border-teal-600 px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50">
             <Upload size={16} /> Upload report
           </Link>}
@@ -118,6 +124,9 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
         </div>
 
         <div className="min-w-0 space-y-4">
+          <TasksCard patientId={id} tasks={(tasks.data ?? []) as Task[]} today={today} noteDates={noteDates}
+            canConfirm={can(role, "task.confirm")} canDismiss={can(role, "task.dismiss")} canComplete={can(role, "task.complete")} />
+
           <div className={card}>
             <h2 className="card-title mb-3 flex items-center gap-2"><Pill size={16} className="text-emerald-600" /> Current medications</h2>
             {activeMeds.length === 0 ? (
