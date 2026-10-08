@@ -112,6 +112,7 @@ Rules:
 - Write ONLY what was said in the conversation. Never invent findings, vitals, diagnoses, plans or history.
 - If a SOAP section has nothing from the conversation, return an empty array for it.
 - Every statement must cite at least one source segment id in "sources". Use only ids that exist in the transcript.
+- Plan must include EVERY order, instruction, advice item and follow-up the clinician states: tests to order, medicines to stop, start or avoid, lifestyle advice, and review or follow-up timing. Keep each Plan statement short, in the clinician's voice, citing the segment ids where it was said. A medicine instruction appears in BOTH the Plan and med_changes. Never add advice the clinician did not say.
 - Assessment contains only what the clinician stated or clearly concluded aloud.
 - Subjective is the patient's reported symptoms and history. Objective is only findings, vitals or results the clinician stated aloud.
 - med_changes only when the clinician explicitly said to start, stop or change a medicine. Use null for dose, frequency or reason that was not said.

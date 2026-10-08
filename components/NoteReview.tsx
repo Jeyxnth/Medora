@@ -201,7 +201,8 @@ export default function NoteReview(p: {
                 Safety check
                 <span className={`font-normal ${critical ? "text-red-700" : warnings ? "text-amber-700" : "text-emerald-700"}`}>· {safetySummary}</span>
               </button>
-              {showSafety && <div className="mt-2"><SafetyAlerts alerts={alerts} title="Safety check (with ticked changes applied)" /></div>}
+              {ticked.size > 0 && <p className="ml-5 text-xs text-slate-500">with ticked changes applied</p>}
+              {showSafety && <div className="mt-2"><SafetyAlerts alerts={alerts} title="" /></div>}
             </section>
           )}
         </div>

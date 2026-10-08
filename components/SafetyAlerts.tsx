@@ -12,7 +12,7 @@ export default function SafetyAlerts({ alerts, title = "Safety alerts", emptyTex
 }) {
   return (
     <div className="space-y-3">
-      <h2 className="card-title">{title}</h2>
+      {title && <h2 className="card-title">{title}</h2>}
       {alerts.length === 0 ? (
         <p className="flex items-center gap-1.5 text-sm text-emerald-700"><ShieldCheck size={16} /> {emptyText}</p>
       ) : (
