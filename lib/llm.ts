@@ -1,5 +1,5 @@
 import Groq from "groq-sdk";
-import { GEMINI_MODEL, GROQ_CHAT_MODEL } from "./config";
+import { GEMINI_FALLBACK_MODELS, GEMINI_MODEL, GEMINI_VISION_MODEL, GROQ_CHAT_MODEL } from "./config";
 import { AiError, withGemini } from "./gemini-client";
 
 type Image = { mimeType: string; data: string }; // data = base64
@@ -16,8 +16,10 @@ async function callGemini({ system, prompt, images, schema, thinking = false }: 
     ...(images ?? []).map((i) => ({ inlineData: { mimeType: i.mimeType, data: i.data } })),
     { text: prompt },
   ];
-  const res = await withGemini((ai) => ai.models.generateContent({
-    model: GEMINI_MODEL,
+  const primary = images?.length ? GEMINI_VISION_MODEL : GEMINI_MODEL;
+  const models = [...new Set([primary, GEMINI_MODEL, GEMINI_VISION_MODEL, ...GEMINI_FALLBACK_MODELS])];
+  const res = await withGemini((ai, model) => ai.models.generateContent({
+    model,
     contents: [{ role: "user", parts }],
     config: {
       systemInstruction: system,
@@ -25,7 +27,7 @@ async function callGemini({ system, prompt, images, schema, thinking = false }: 
       responseJsonSchema: schema,
       ...(thinking ? {} : { temperature: 0, thinkingConfig: { thinkingBudget: 0 } }),
     },
-  }));
+  }), models);
   return JSON.parse(res.text ?? "");
 }
 

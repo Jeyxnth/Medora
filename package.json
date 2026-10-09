@@ -10,7 +10,8 @@
     "seed": "tsx scripts/seed.ts",
     "test-extract": "tsx scripts/test-extract.ts",
     "permissions-table": "tsx scripts/permissions-table.ts",
-    "check:models": "tsx scripts/check-models.ts"
+    "check:models": "tsx scripts/check-models.ts",
+    "check:gemini-models": "tsx scripts/check-gemini-models.ts"
   },
   "dependencies": {
     "@google/genai": "^2.27.0",

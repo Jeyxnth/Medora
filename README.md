@@ -47,7 +47,7 @@ There is no vector database. For each question, one patient's approved records a
 | UI | React 19, TypeScript, Tailwind CSS |
 | Charts and icons | Recharts, lucide-react |
 | Database, auth, storage | Supabase (Postgres with row-level security, Auth, Storage) |
-| Extraction, notes, Q&A | Google Gemini Flash (`gemini-2.5-flash`) |
+| Extraction, notes, Q&A | Google Gemini Flash (`GEMINI_MODEL`, default `gemini-flash-latest`) |
 | Transcription | Groq Whisper (`GROQ_WHISPER_MODEL`, default `whisper-large-v3-turbo`) |
 | Text fallback | Groq chat model (`GROQ_CHAT_MODEL`, default `openai/gpt-oss-120b`), used when every Gemini key is out of quota. `npm run check:models` lists valid ids |
 | Hosting | Vercel |
@@ -76,6 +76,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key   # used only by the seed script
 GEMINI_API_KEY=your-gemini-key
 GEMINI_API_KEY_2=optional-second-gemini-key   # failover on quota errors (or GEMINI_API_KEYS=a,b,c)
+GEMINI_MODEL=optional-override
+GEMINI_VISION_MODEL=optional-override   # used for images (document reading)
 GROQ_API_KEY=your-groq-key
 GROQ_CHAT_MODEL=optional-override
 GROQ_WHISPER_MODEL=optional-override
