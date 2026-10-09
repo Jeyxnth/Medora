@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import { can } from "@/lib/permissions";
-import { currentRole } from "@/lib/roles";
+import { currentRole, currentUser } from "@/lib/roles";
 import { extractDocument } from "@/lib/extract";
 import { validateExtraction } from "@/lib/validate";
 
@@ -10,7 +10,7 @@ export const maxDuration = 60;
 
 export async function POST(req: Request) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await currentUser(supabase);
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
   if (!can(await currentRole(supabase), "upload")) return NextResponse.json({ error: "Not allowed" }, { status: 403 });

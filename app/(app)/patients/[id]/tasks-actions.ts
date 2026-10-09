@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { currentUser } from "@/lib/roles";
 import { can, type Action } from "@/lib/permissions";
 
 type Step = { permission: Action; from: string; to: string; audit: string; stamp: "confirmed" | "completed" | null };
@@ -13,7 +14,7 @@ const STEPS = {
 
 async function move(taskId: string, step: Step): Promise<{ error?: string }> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await currentUser(supabase);
   if (!user) return { error: "Not signed in" };
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (!can(profile?.role, step.permission)) return { error: "You are not allowed to do that." };

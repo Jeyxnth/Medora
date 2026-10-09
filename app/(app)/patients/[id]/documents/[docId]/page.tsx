@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { currentRole } from "@/lib/roles";
 import { can } from "@/lib/permissions";
 import { namesMatch } from "@/lib/utils";
 import type { Extraction } from "@/lib/extract";
@@ -12,15 +13,17 @@ export default async function DocumentPage(props: PageProps<"/patients/[id]/docu
   const { id, docId } = await props.params;
   const supabase = await createClient();
 
-  const { data: doc } = await supabase.from("documents").select("*").eq("id", docId).eq("patient_id", id).single();
+  const [{ data: doc }, { data: patient }, role, safety] = await Promise.all([
+    supabase.from("documents").select("*").eq("id", docId).eq("patient_id", id).single(),
+    supabase.from("patients").select("name").eq("id", id).single(),
+    currentRole(supabase),
+    loadSafetyContext(supabase, id),
+  ]);
   if (!doc) notFound();
-  const { data: patient } = await supabase.from("patients").select("name").eq("id", id).single();
-  const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user?.id ?? "").single();
-  const { data: signed } = await supabase.storage.from("documents").createSignedUrl(doc.file_path, 3600);
-
-  const safety = await loadSafetyContext(supabase, id);
-  await logAudit({ action: "view", entityType: "document", entityId: docId, patientId: id });
+  const [{ data: signed }] = await Promise.all([
+    supabase.storage.from("documents").createSignedUrl(doc.file_path, 3600),
+    logAudit({ action: "view", entityType: "document", entityId: docId, patientId: id }),
+  ]);
 
   const extraction = (doc.extracted_json ?? null) as Extraction | null;
   const nameMismatch = !!extraction && !namesMatch(extraction.patient_name, patient?.name);
@@ -37,8 +40,8 @@ export default async function DocumentPage(props: PageProps<"/patients/[id]/docu
           docId={docId}
           docType={doc.doc_type}
           approved={doc.status === "approved"}
-          isDoctor={can(profile?.role, "approve")}
-          canDiscard={can(profile?.role, "discard")}
+          isDoctor={can(role, "approve")}
+          canDiscard={can(role, "discard")}
           imageUrl={signed?.signedUrl ?? null}
           initial={extraction}
           patientName={patient?.name ?? ""}

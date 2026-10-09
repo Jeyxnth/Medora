@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, FileText, Loader2, Send, Sparkles } from "lucide-react";
+import { focusItem } from "@/lib/focus";
 import type { AskResult } from "@/app/api/ask/route";
 
 const SUGGESTIONS = [
@@ -96,8 +97,14 @@ export default function AskMedora({ patientId }: { patientId: string }) {
                     const key = `${src?.href}|${src?.label}`;
                     if (!src || seen.has(key)) return null; // each distinct source shown once per answer
                     seen.add(key);
-                    return (
-                      <Link key={id} href={src.href} className="flex items-center gap-1 rounded-md bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800 ring-1 ring-teal-200 hover:bg-teal-100">
+                    const cls = "flex items-center gap-1 rounded-md bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800 ring-1 ring-teal-200 hover:bg-teal-100";
+                    // Same-page records scroll to and flash the item (works on every click); documents and notes open their page.
+                    return src.focus ? (
+                      <button key={id} type="button" onClick={() => focusItem(src.focus!)} className={cls}>
+                        <FileText size={11} /> {src.label}
+                      </button>
+                    ) : (
+                      <Link key={id} href={src.href} className={cls}>
                         <FileText size={11} /> {src.label}
                       </Link>
                     );

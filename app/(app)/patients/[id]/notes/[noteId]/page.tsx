@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { currentRole } from "@/lib/roles";
 import { can } from "@/lib/permissions";
 import type { NoteContent } from "@/lib/scribe";
 import { loadSafetyContext } from "@/lib/safety-context";
@@ -11,13 +12,13 @@ export default async function NotePage(props: PageProps<"/patients/[id]/notes/[n
   const { id, noteId } = await props.params;
   const supabase = await createClient();
 
-  const { data: note } = await supabase.from("clinical_notes").select("*").eq("id", noteId).eq("patient_id", id).single();
+  const [{ data: note }, { data: patient }, role, safety] = await Promise.all([
+    supabase.from("clinical_notes").select("*").eq("id", noteId).eq("patient_id", id).single(),
+    supabase.from("patients").select("name").eq("id", id).single(),
+    currentRole(supabase),
+    loadSafetyContext(supabase, id),
+  ]);
   if (!note?.content) notFound();
-  const { data: patient } = await supabase.from("patients").select("name").eq("id", id).single();
-  const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user?.id ?? "").single();
-
-  const safety = await loadSafetyContext(supabase, id);
   await logAudit({ action: "view", entityType: "clinical_note", entityId: noteId, patientId: id });
 
   return (
@@ -26,8 +27,8 @@ export default async function NotePage(props: PageProps<"/patients/[id]/notes/[n
       <NoteReview
         noteId={noteId}
         approved={note.status === "approved"}
-        isDoctor={can(profile?.role, "approve")}
-        canDiscard={can(profile?.role, "discard")}
+        isDoctor={can(role, "approve")}
+        canDiscard={can(role, "discard")}
         initial={note.content as NoteContent}
         patientId={id}
         safety={safety}

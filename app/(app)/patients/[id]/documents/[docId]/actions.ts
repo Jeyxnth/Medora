@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { currentUser } from "@/lib/roles";
 import { can } from "@/lib/permissions";
 import { canonicalName, computeFlag } from "@/lib/validate";
 import type { Extraction } from "@/lib/extract";
@@ -10,7 +11,7 @@ const FLAG_WORD = { H: "high", L: "low", N: "normal" } as const; // same words t
 
 async function load(docId: string) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await currentUser(supabase);
   if (!user) throw new Error("Not signed in");
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   const { data: doc } = await supabase.from("documents").select("*").eq("id", docId).single();

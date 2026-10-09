@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { currentUser } from "@/lib/roles";
 
 export async function logAudit(a: {
   action: string;
@@ -7,7 +8,7 @@ export async function logAudit(a: {
   patientId?: string;
 }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await currentUser(supabase);
   await supabase.from("audit_log").insert({
     user_id: user?.id,
     action: a.action,

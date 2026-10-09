@@ -9,6 +9,7 @@ export type Source = {
   text: string; // plain body of the record, used to verify numbers
   date: string | null;
   href: string;
+  focus?: string; // DOM id on the patient page to scroll to and flash (instead of navigating)
 };
 
 const MAX_CHARS = 100_000; // about 25k tokens
@@ -49,7 +50,7 @@ export async function buildPatientContext(patientId: string) {
 
   for (const a of allergies.data ?? []) {
     const text = [a.substance, a.reaction].filter(Boolean).join(" | ");
-    add("A", { kind: "allergy", label: "Allergy", text, date: null, href: timeline }, (id) => `${id} | allergy | ${text}`);
+    add("A", { kind: "allergy", label: "Allergy", text, date: null, href: timeline, focus: "allergies" }, (id) => `${id} | allergy | ${text}`);
   }
 
   // Documents first so labs can point at them.
@@ -66,7 +67,7 @@ export async function buildPatientContext(patientId: string) {
     const today = new Date().toISOString().slice(0, 10);
     const active = !m.end_date || m.end_date > today;
     const text = `${m.drug_name} ${[m.dose, m.frequency].filter(Boolean).join(" ")} | ${m.start_date ?? "?"} to ${active ? "present" : m.end_date}`;
-    add("M", { kind: "medication", label: `Medication ${m.drug_name}`, text, date: m.start_date, href: timeline }, (id) => `${id} | medication | ${text}`);
+    add("M", { kind: "medication", label: `Medication ${m.drug_name}`, text, date: m.start_date, href: timeline, focus: `medstart-${m.id}` }, (id) => `${id} | medication | ${text}`);
   }
 
   for (const l of labs.data ?? []) {
@@ -77,6 +78,7 @@ export async function buildPatientContext(patientId: string) {
     add("L", {
       kind: "lab", label: `Lab ${l.collected_date ?? ""}`.trim(), text, date: l.collected_date,
       href: l.document_id ? `${base}/documents/${l.document_id}` : timeline,
+      focus: l.document_id || !l.collected_date ? undefined : `lab-${l.collected_date}`,
     }, (id) => `${id} | lab | ${l.collected_date} | ${text}${doc ? ` | doc ${doc}` : ""}`);
   }
 
@@ -93,7 +95,7 @@ export async function buildPatientContext(patientId: string) {
   const encIds: string[] = [];
   for (const e of encounters.data ?? []) {
     const text = [e.type, e.summary].filter(Boolean).join(" | ");
-    encIds.push(add("E", { kind: "encounter", label: `Encounter ${e.encounter_date}`, text, date: e.encounter_date, href: timeline }, (id) => `${id} | encounter | ${e.encounter_date} | ${text}`));
+    encIds.push(add("E", { kind: "encounter", label: `Encounter ${e.encounter_date}`, text, date: e.encounter_date, href: timeline, focus: `enc-${e.id}` }, (id) => `${id} | encounter | ${e.encounter_date} | ${text}`));
   }
 
   let size = [...lines.values()].reduce((a, l) => a + l.length + 1, 0);

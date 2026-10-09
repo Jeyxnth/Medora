@@ -3,7 +3,7 @@ import Groq from "groq-sdk";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import { can } from "@/lib/permissions";
-import { currentRole } from "@/lib/roles";
+import { currentRole, currentUser } from "@/lib/roles";
 import { GROQ_WHISPER_MODEL } from "@/lib/config";
 import { ageFromDob } from "@/lib/utils";
 import { draftNote, splitTranscript, transcriptText } from "@/lib/scribe";
@@ -31,7 +31,7 @@ async function transcribe(file: File, hint: string): Promise<Seg[]> {
 
 export async function POST(req: Request) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await currentUser(supabase);
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
   if (!can(await currentRole(supabase), "record_consultation")) return NextResponse.json({ error: "Not allowed" }, { status: 403 });

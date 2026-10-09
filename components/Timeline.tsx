@@ -48,7 +48,7 @@ function Item({ item }: { item: TimelineItem }) {
   return (
     <div className="relative pl-7">
       <span className={`absolute left-0 top-3.5 h-3 w-3 rounded-full ring-4 ring-white ${dot}`} />
-      <div className="rounded-xl border border-slate-200 bg-white p-2.5">
+      <div id={item.id} className="rounded-xl border border-slate-200 bg-white p-2.5">
         <div className="flex flex-wrap items-center gap-2">
           <span className={`flex h-6 w-6 items-center justify-center rounded-md ${color}`}><Icon size={13} /></span>
           <span className="text-sm font-medium text-slate-900">{item.title}</span>

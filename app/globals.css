@@ -44,3 +44,9 @@ body {
 }
 button:not(:disabled), a { transition: background-color 0.15s, border-color 0.15s, color 0.15s; }
 button:not(:disabled) { cursor: pointer; }
+
+@keyframes focus-flash {
+  0%, 70% { box-shadow: 0 0 0 3px #14b8a6; background-color: #f0fdfa; }
+  100% { box-shadow: 0 0 0 3px transparent; }
+}
+.focus-flash { animation: focus-flash 3s ease-out; border-radius: 0.75rem; }

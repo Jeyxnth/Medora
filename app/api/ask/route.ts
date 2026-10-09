@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import { can } from "@/lib/permissions";
-import { currentRole } from "@/lib/roles";
+import { currentRole, currentUser } from "@/lib/roles";
 import { generateJSON } from "@/lib/llm";
 import { buildPatientContext, type Source } from "@/lib/records";
 import { stripSourceIds, verifyStatement } from "@/lib/verify-ask";
@@ -15,7 +15,7 @@ export type AskResult = {
   answer: AskStatement[];
   not_found: boolean;
   follow_ups: string[];
-  sources: Record<string, Pick<Source, "id" | "label" | "href">>;
+  sources: Record<string, Pick<Source, "id" | "label" | "href" | "focus">>;
 };
 
 const SCHEMA = {
@@ -50,7 +50,7 @@ const SUMMARY_PROMPT = `Summarize this patient in 6 to 10 short statements cover
 
 export async function POST(req: Request) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await currentUser(supabase);
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
   if (!can(await currentRole(supabase), "ask")) return NextResponse.json({ error: "Not allowed" }, { status: 403 });
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
   const used: AskResult["sources"] = {};
   const answer: AskStatement[] = (raw.answer ?? []).map((s) => {
     const valid = [...new Set((s.sources ?? []).filter((id) => sources.has(id)))];
-    for (const id of valid) used[id] = { id, label: sources.get(id)!.label, href: sources.get(id)!.href };
+    for (const id of valid) used[id] = { id, label: sources.get(id)!.label, href: sources.get(id)!.href, focus: sources.get(id)!.focus };
     if (!valid.length) return { text: stripSourceIds(s.text, sources), sources: [], verified: false, reason: "no valid source cited" };
     return { sources: valid, ...verifyStatement(s.text, valid, sources) };
   });

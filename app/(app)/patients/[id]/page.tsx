@@ -15,6 +15,7 @@ import Timeline from "@/components/Timeline";
 import SafetyAlerts from "@/components/SafetyAlerts";
 import TrendsCard from "@/components/TrendsCard";
 import AskMedora from "@/components/AskMedora";
+import FocusHighlight from "@/components/FocusHighlight";
 import TasksCard from "@/components/TasksCard";
 import PreVisitBrief from "@/components/PreVisitBrief";
 import type { Task } from "@/lib/tasks";
@@ -24,31 +25,33 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
   const { notice } = await props.searchParams;
   const supabase = await createClient();
 
-  const { data: patient } = await supabase.from("patients").select("*").eq("id", id).single();
-  if (!patient) notFound();
-
-  const [allergies, encounters, labs, meds, documents, notes, tasks] = await Promise.all([
+  // One round of parallel queries. The audit log reads start as soon as the role is known (doctors only).
+  const accessLogFor = async (role: string | null) => {
+    if (!can(role, "view_audit")) return { rows: [], names: new Map<string, { full_name: string; role: string }>() };
+    const [log, profs] = await Promise.all([
+      supabase.from("audit_log").select("id, action, created_at, user_id")
+        .eq("patient_id", id).order("created_at", { ascending: false }).limit(10),
+      supabase.from("profiles").select("id, full_name, role"),
+    ]);
+    return { rows: log.data ?? [], names: new Map((profs.data ?? []).map((p) => [p.id as string, p as { full_name: string; role: string }])) };
+  };
+  const [{ data: patient }, allergies, encounters, labs, meds, documents, notes, tasks, role, auditLog] = await Promise.all([
+    supabase.from("patients").select("*").eq("id", id).single(),
     supabase.from("allergies").select("*").eq("patient_id", id),
     supabase.from("encounters").select("*").eq("patient_id", id),
     supabase.from("lab_results").select("*").eq("patient_id", id),
     supabase.from("medications").select("*").eq("patient_id", id),
-    supabase.from("documents").select("*").eq("patient_id", id),
-    supabase.from("clinical_notes").select("*").eq("patient_id", id),
+    // only what the timeline needs (not extracted_json / note content / transcript)
+    supabase.from("documents").select("id, doc_type, status, uploaded_at").eq("patient_id", id),
+    supabase.from("clinical_notes").select("id, note_type, status, created_at").eq("patient_id", id),
     supabase.from("tasks").select("*").eq("patient_id", id).order("created_at"),
+    currentRole(supabase),
+    currentRole(supabase).then(accessLogFor),
+    logAudit({ action: "view", entityType: "patient", entityId: id, patientId: id }),
   ]);
-
-  const role = await currentRole(supabase);
-  let accessLog: { id: string; action: string; created_at: string; user_id: string }[] = [];
-  const userNames = new Map<string, { full_name: string; role: string }>();
-  if (can(role, "view_audit")) {
-    const { data } = await supabase.from("audit_log").select("id, action, created_at, user_id")
-      .eq("patient_id", id).order("created_at", { ascending: false }).limit(10);
-    accessLog = data ?? [];
-    const { data: profs } = await supabase.from("profiles").select("id, full_name, role");
-    for (const p of profs ?? []) userNames.set(p.id, p);
-  }
-
-  await logAudit({ action: "view", entityType: "patient", entityId: id, patientId: id });
+  if (!patient) notFound();
+  const accessLog = auditLog.rows;
+  const userNames = auditLog.names;
 
   const today = new Date().toISOString().slice(0, 10);
   const activeMeds = (meds.data ?? []).filter((m) => !m.end_date || m.end_date > today);
@@ -68,6 +71,7 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
 
   return (
     <div className="space-y-4">
+      <FocusHighlight />
       <Link href="/patients" className="text-sm text-teal-700 hover:underline">← All patients</Link>
 
       {typeof notice === "string" && (
@@ -99,7 +103,7 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
       </div>
 
       {allergyList.length > 0 ? (
-        <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div id="allergies" className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           <AlertTriangle size={18} className="mt-0.5 shrink-0" />
           <div><strong>Allergies: </strong>{allergyList.map((a) => `${a.substance}${a.reaction ? ` (${a.reaction})` : ""}`).join(", ")}</div>
         </div>

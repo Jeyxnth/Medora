@@ -1,16 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { can } from "@/lib/permissions";
+import { currentProfile, currentUser } from "@/lib/roles";
 import Avatar from "./Avatar";
 import LogoutButton from "./LogoutButton";
 import NavLinks from "./NavLinks";
 
 export default async function Header() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = user
-    ? await supabase.from("profiles").select("full_name, role").eq("id", user.id).single()
-    : { data: null };
+  const [user, profile] = await Promise.all([currentUser(supabase), currentProfile(supabase)]);
   const name = profile?.full_name ?? user?.email;
 
   return (

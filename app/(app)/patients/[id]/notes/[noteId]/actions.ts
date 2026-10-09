@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { currentUser } from "@/lib/roles";
 import { can } from "@/lib/permissions";
 import { normalizeDrug } from "@/lib/safety";
 import type { NoteContent } from "@/lib/scribe";
@@ -9,7 +10,7 @@ import { draftTasksFromPlan } from "@/lib/tasks";
 
 async function load(noteId: string) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await currentUser(supabase);
   if (!user) throw new Error("Not signed in");
   const { data: profile } = await supabase.from("profiles").select("role, full_name").eq("id", user.id).single();
   const { data: note } = await supabase.from("clinical_notes").select("*").eq("id", noteId).single();
