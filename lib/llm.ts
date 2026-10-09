@@ -1,7 +1,7 @@
 import Groq from "groq-sdk";
 import {
   DEEPSEEK_MODEL, GEMINI_FALLBACK_MODELS, GEMINI_MODEL, GEMINI_VISION_MODEL, GROQ_CHAT_MODEL, LLM_PROVIDERS,
-  OPENROUTER_FALLBACK_MODELS, OPENROUTER_MODEL, OPENROUTER_VISION_FALLBACK_MODELS, OPENROUTER_VISION_MODEL,
+  LLM_RETRY_ATTEMPTS, LLM_RETRY_DELAY_MS, LLM_ROUTE_COOLDOWN_MS, OPENROUTER_FALLBACK_MODELS, OPENROUTER_MODEL, OPENROUTER_VISION_FALLBACK_MODELS, OPENROUTER_VISION_MODEL,
 } from "./config";
 import { AiError, withGemini } from "./gemini-client";
 import { chatJSON, RouteError, type Image } from "./openai-compat";
@@ -50,8 +50,6 @@ async function callGroq({ system, prompt, schema }: Args) {
   return JSON.parse(res.choices[0].message.content ?? "");
 }
 
-type Route = { id: string; run: () => Promise<unknown> };
-
 // Routes for one request, in LLM_PROVIDERS order. A provider without a key (or a route without a model) is skipped.
 function routesFor(a: Args): Route[] {
   const vision = !!a.images?.length;
@@ -74,27 +72,61 @@ function routesFor(a: Args): Route[] {
   return routes;
 }
 
-const COOLDOWN_MS = 75_000;
+export type Route = { id: string; run: () => Promise<unknown> };
+
 const cooling = new Map<string, number>(); // route id -> time it may be used again (in memory only)
+
+// 429, 502, 503, 504, timeouts and network errors are worth one more try on the same route. Everything else
+// (400, 401, 402, 403, 404, other 5xx, unreadable answers, Gemini errors) goes straight to the next route.
+const RETRYABLE = new Set<unknown>([429, 502, 503, 504, "timeout", "network"]);
+const MAX_RETRY_AFTER_MS = 5000;
 
 const statusOf = (e: unknown) =>
   e instanceof RouteError ? e.status : e instanceof AiError ? "ai" : (e as { status?: number })?.status ?? "error";
 
-// Tries each route once, in order. A failed route (429, 5xx, timeout, network, unreadable answer) goes on a short
-// cooldown and the next route is tried. Throws AiError with a message that is safe to show to the user.
-export async function generateJSON<T = unknown>(args: Args): Promise<T> {
-  const all = routesFor(args);
-  if (!all.length) throw new AiError("AI is not configured. Check the provider settings.");
+type Deps = {
+  sleep?: (ms: number) => Promise<void>;
+  now?: () => number;
+  cooling?: Map<string, number>;
+  retryDelayMs?: number;
+  retryAttempts?: number;
+  cooldownMs?: number;
+};
 
-  const now = Date.now();
-  const ready = all.filter((r) => (cooling.get(r.id) ?? 0) <= now);
-  for (const r of ready.length ? ready : all) { // everything cooling down: try once rather than fail without a call
-    try {
-      return (await r.run()) as T;
-    } catch (e) {
-      cooling.set(r.id, Date.now() + COOLDOWN_MS);
-      console.warn(`[ai] route ${r.id} failed (${statusOf(e)}), cooling down 75s`);
+// Tries each route in order. A route that fails with a retryable error is retried (default once, after 3 s, or after
+// its Retry-After if that is 1-5 s; a longer Retry-After skips the retry). After that the route rests for the cooldown
+// (default 10 s) and the next route is tried. No whole-list retry: if every route fails, throws a friendly AiError.
+export async function runRoutes<T>(all: Route[], deps: Deps = {}): Promise<T> {
+  const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  const now = deps.now ?? Date.now;
+  const rest = deps.cooling ?? cooling;
+  const delay = deps.retryDelayMs ?? LLM_RETRY_DELAY_MS;
+  const attempts = deps.retryAttempts ?? LLM_RETRY_ATTEMPTS;
+  const cooldown = deps.cooldownMs ?? LLM_ROUTE_COOLDOWN_MS;
+
+  if (!all.length) throw new AiError("AI is not configured. Check the provider settings.");
+  const ready = all.filter((r) => (rest.get(r.id) ?? 0) <= now());
+
+  for (const r of ready.length ? ready : all) { // everything resting: try each once rather than fail without a call
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return (await r.run()) as T;
+      } catch (e) {
+        const status = statusOf(e);
+        const after = e instanceof RouteError ? e.retryAfterMs : undefined;
+        const canRetry = attempt < attempts && RETRYABLE.has(status) && !(after !== undefined && after > MAX_RETRY_AFTER_MS);
+        if (!canRetry) {
+          rest.set(r.id, now() + cooldown);
+          console.warn(`[ai] route ${r.id} failed (${status}), next route, resting ${cooldown / 1000}s`);
+          break;
+        }
+        const wait = after !== undefined && after >= 1000 ? after : delay;
+        console.warn(`[ai] route ${r.id} failed (${status}), retrying in ${wait / 1000}s`);
+        await sleep(wait);
+      }
     }
   }
   throw new AiError("AI is busy, try again");
 }
+
+export const generateJSON = <T = unknown>(args: Args): Promise<T> => runRoutes<T>(routesFor(args));

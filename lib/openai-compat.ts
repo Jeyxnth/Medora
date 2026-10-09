@@ -5,8 +5,15 @@ export type Image = { mimeType: string; data: string }; // data = base64
 
 // A failed route. `status` is the HTTP code, or "timeout" / "network" / "unreadable".
 export class RouteError extends Error {
-  constructor(public status: number | "timeout" | "network" | "unreadable") { super(`route failed (${status})`); }
+  constructor(public status: number | "timeout" | "network" | "unreadable", public retryAfterMs?: number) { super(`route failed (${status})`); }
 }
+
+// Retry-After header in seconds -> ms (the date form is ignored).
+const retryAfter = (res: Response) => {
+  const h = res.headers.get("retry-after");
+  const s = h === null || h.trim() === "" ? NaN : Number(h);
+  return Number.isFinite(s) && s >= 0 ? Math.round(s * 1000) : undefined;
+};
 
 export type ChatArgs = {
   url: string;
@@ -60,7 +67,7 @@ export async function chatJSON(a: ChatArgs): Promise<unknown> {
   } catch (e) {
     throw new RouteError((e as Error).name === "TimeoutError" ? "timeout" : "network");
   }
-  if (!res.ok) throw new RouteError(res.status);
+  if (!res.ok) throw new RouteError(res.status, retryAfter(res));
 
   const body = (await res.json().catch(() => null)) as { choices?: { message?: { content?: string | null } }[] } | null;
   const content = body?.choices?.[0]?.message?.content;

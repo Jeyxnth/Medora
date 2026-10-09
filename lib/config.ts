@@ -2,6 +2,14 @@
 // Add "gemini" or "groq" to use them too, e.g. LLM_PROVIDERS=openrouter,deepseek,gemini
 const list = (v: string | undefined) => (v ?? "").split(",").map((m) => m.trim()).filter(Boolean);
 
+const num = (v: string | undefined, fallback: number) => (v !== undefined && v !== "" && Number.isFinite(Number(v)) ? Number(v) : fallback);
+
+// Failover timing. A route that fails with 429/502/503/504/timeout/network is retried after LLM_RETRY_DELAY_MS (up to
+// LLM_RETRY_ATTEMPTS times), then rests for LLM_ROUTE_COOLDOWN_MS while the next route is used.
+export const LLM_RETRY_DELAY_MS = num(process.env.LLM_RETRY_DELAY_MS, 3000);
+export const LLM_RETRY_ATTEMPTS = num(process.env.LLM_RETRY_ATTEMPTS, 1);
+export const LLM_ROUTE_COOLDOWN_MS = num(process.env.LLM_ROUTE_COOLDOWN_MS, 10_000);
+
 export const LLM_PROVIDERS = list(process.env.LLM_PROVIDERS || "openrouter,deepseek");
 
 // OpenRouter: free models by default (see https://openrouter.ai/models). Free models are rate limited and sometimes busy.

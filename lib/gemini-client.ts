@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { LLM_ROUTE_COOLDOWN_MS } from "./config";
 
 // Friendly error that is safe to show in the UI (never contains provider JSON or keys).
 export class AiError extends Error {}
@@ -29,7 +30,6 @@ function retryDelayMs(e: unknown) {
 
 const missing = new Set<string>(); // routes ("keyNumber:model") that returned 404
 const busyUntil = new Map<string, number>(); // routes that returned 500/502/503/504 or a network error
-const BUSY_COOLDOWN_MS = 75_000;
 const RETRY_PAUSE_MS = 1500;
 let lastGood: string | null = null; // the route that last succeeded, tried first
 
@@ -39,7 +39,7 @@ type Route = { id: string; key: string; n: number; model: string };
 // first, then the fallback models), with the last route that worked in front:
 //   404 (model not found)      -> route is skipped from now on
 //   429 / quota                -> the key is parked for the retryDelay (default 1 hour)
-//   500/502/503/504 / network  -> the route cools down for ~75 s
+//   500/502/503/504 / network  -> the route rests for LLM_ROUTE_COOLDOWN_MS
 // If every route is busy, wait 1.5 s and go through the list once more, then give up with a friendly error.
 export async function withGemini<T>(fn: (ai: GoogleGenAI, model: string) => Promise<T>, models: string[]): Promise<T> {
   const all = keys();
@@ -65,8 +65,8 @@ export async function withGemini<T>(fn: (ai: GoogleGenAI, model: string) => Prom
           console.warn(`[gemini] key #${r.n} quota exhausted, trying next`);
         } else if (status(e) >= 500 || !status(e)) {
           outcome.busy = true;
-          busyUntil.set(r.id, Date.now() + BUSY_COOLDOWN_MS);
-          console.warn(`[gemini] key #${r.n} model=${r.model} failed (${status(e) || "network"}), cooling down 75s`);
+          busyUntil.set(r.id, Date.now() + LLM_ROUTE_COOLDOWN_MS);
+          console.warn(`[gemini] key #${r.n} model=${r.model} failed (${status(e) || "network"}), resting ${LLM_ROUTE_COOLDOWN_MS / 1000}s`);
         } else {
           console.error(`[gemini] request rejected (${status(e)}) model=${r.model}`);
           throw new AiError("The AI request failed");

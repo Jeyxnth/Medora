@@ -154,7 +154,7 @@ Limitations:
 - English only.
 - Live captions during recording use the browser speech API; Chrome is recommended.
 - Audio uploads are limited to 9 MB and recordings to 10 minutes.
-- Free-tier AI rate limits apply. When a model is rate limited or busy, the next configured route is tried (and put on a short cooldown); DeepSeek never handles images.
+- Free-tier AI rate limits apply. When a model is rate limited or busy, it is retried once after 3 seconds, then rests for 10 seconds while the next configured route is tried (`LLM_RETRY_DELAY_MS`, `LLM_RETRY_ATTEMPTS`, `LLM_ROUTE_COOLDOWN_MS`); DeepSeek never handles images.
 
 Roadmap:
 
