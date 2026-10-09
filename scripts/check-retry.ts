@@ -30,7 +30,7 @@ function clock() {
   return { waits, now: () => t, advance: (ms: number) => { t += ms; }, sleep: async (ms: number) => { waits.push(ms); t += ms; } };
 }
 const deps = (c: ReturnType<typeof clock>, cooling = new Map<string, number>()) =>
-  ({ sleep: c.sleep, now: c.now, cooling, retryDelayMs: 3000, retryAttempts: 1, cooldownMs: 10_000 });
+  ({ sleep: c.sleep, now: c.now, cooling, retryDelayMs: 3000, retryAttempts: 1, cooldownMs: 10_000, callTimeoutMs: 15_000, budgetMs: 50_000 });
 
 const log = console.warn;
 console.warn = () => {}; // keep the output to the PASS/FAIL lines
@@ -98,6 +98,27 @@ async function main() {
     try { await runRoutes([a, b, d], deps(c)); } catch (e) { msg = (e as Error).message; isAi = e instanceof AiError; }
     check("all routes failing gives the friendly error", isAi && msg === "AI is busy, try again", msg);
     check("total wait is bounded (2 retries x 3s) and no whole-list retry", c.waits.join() === "3000,3000" && a.calls === 2 && b.calls === 2 && d.calls === 1, `waits=${c.waits}, calls=${a.calls},${b.calls},${d.calls}`);
+  }
+  // 9. every route hangs (fake clock): each call runs to its timeout; the friendly error comes back inside the 50s budget
+  {
+    const c = clock(); const t0 = c.now();
+    const hang = (id: string) => ({ id, calls: 0, run: async function (this: { calls: number }, ms: number) { this.calls++; await c.sleep(ms); throw new RouteError("timeout"); } });
+    const routes = [hang("h1"), hang("h2"), hang("h3")];
+    let msg = "";
+    try { await runRoutes(routes as unknown as Route[], deps(c)); } catch (e) { msg = (e as Error).message; }
+    const elapsed = c.now() - t0;
+    check("all routes hang: friendly error within the 50s budget", msg === "AI is busy, try again" && elapsed <= 50_000, `simulated ${elapsed / 1000}s, msg="${msg}"`);
+    check("retry wait counted against the budget", c.waits.includes(3000) && elapsed <= 50_000, `waits=${c.waits}`);
+  }
+  // 10. real timers: promises that never settle are cut off by the call timeout and the budget
+  {
+    const never = (id: string): Route => ({ id, run: () => new Promise(() => {}) });
+    const t0 = Date.now(); let msg = "";
+    try {
+      await runRoutes([never("n1"), never("n2"), never("n3")], { cooling: new Map(), retryDelayMs: 20, retryAttempts: 1, cooldownMs: 1000, callTimeoutMs: 40, budgetMs: 200 });
+    } catch (e) { msg = (e as Error).message; }
+    const ms = Date.now() - t0;
+    check("never-settling routes are cut off, error inside the budget (real timers)", msg === "AI is busy, try again" && ms < 400, `${ms} ms of a 200 ms budget`);
   }
   console.warn = log;
   console.log(failed ? `\n${failed} check(s) FAILED` : "\nAll checks passed (mocked, no provider was called)");

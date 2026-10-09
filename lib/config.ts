@@ -9,6 +9,10 @@ const num = (v: string | undefined, fallback: number) => (v !== undefined && v !
 export const LLM_RETRY_DELAY_MS = num(process.env.LLM_RETRY_DELAY_MS, 3000);
 export const LLM_RETRY_ATTEMPTS = num(process.env.LLM_RETRY_ATTEMPTS, 1);
 export const LLM_ROUTE_COOLDOWN_MS = num(process.env.LLM_ROUTE_COOLDOWN_MS, 10_000);
+// Time limits. One provider call is cut off after LLM_CALL_TIMEOUT_MS; one request (all routes and retry waits together)
+// stops trying routes after LLM_TOTAL_BUDGET_MS, so the friendly error arrives before the route's 60 s maxDuration.
+export const LLM_CALL_TIMEOUT_MS = num(process.env.LLM_CALL_TIMEOUT_MS, 15_000);
+export const LLM_TOTAL_BUDGET_MS = num(process.env.LLM_TOTAL_BUDGET_MS, 50_000);
 
 export const LLM_PROVIDERS = list(process.env.LLM_PROVIDERS || "openrouter,deepseek");
 
