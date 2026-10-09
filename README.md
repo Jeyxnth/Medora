@@ -47,15 +47,14 @@ There is no vector database. For each question, one patient's approved records a
 | UI | React 19, TypeScript, Tailwind CSS |
 | Charts and icons | Recharts, lucide-react |
 | Database, auth, storage | Supabase (Postgres with row-level security, Auth, Storage) |
-| Extraction, notes, Q&A | OpenRouter (`OPENROUTER_MODEL` for text, `OPENROUTER_VISION_MODEL` for images, `OPENROUTER_FALLBACK_MODELS`), then DeepSeek for text (`DEEPSEEK_MODEL`). Order is set by `LLM_PROVIDERS` (default `openrouter,deepseek`); Gemini is optional and off unless you add `gemini` |
+| Extraction, notes, Q&A | Google Gemini (`GEMINI_MODEL` default `gemini-3.8-flash`, `GEMINI_VISION_MODEL` for images, `GEMINI_FALLBACK_MODELS` default `gemini-3.7-flash`). Keys: `GEMINI_API_KEY`, `GEMINI_API_KEY_2`, or a comma-separated `GEMINI_API_KEYS`; each key and model is tried in turn. Order is set by `LLM_PROVIDERS` (default `gemini,groq`) |
 | Transcription | Groq Whisper (`GROQ_WHISPER_MODEL`, default `whisper-large-v3-turbo`) |
-| Local fallback for images | Ollama (`OLLAMA_VISION_MODEL`, for example `qwen2.5vl:7b`), only after every API route failed. Image order is `LLM_VISION_PROVIDERS` (default `openrouter,ollama`). It is skipped when no model is set or Ollama is not running. **Localhost only**: Vercel cannot reach a local Ollama, so on Vercel it is skipped. It has its own limit (`OLLAMA_CALL_TIMEOUT_MS`, default 120 s) that starts when Ollama is reached, and is never retried. Text calls do not use it unless you add `ollama` to `LLM_PROVIDERS` and set `OLLAMA_MODEL` |
-| Optional extra providers | `gemini` (keys and models via `GEMINI_*`, see `npm run check:gemini-models`) and `groq` chat (`GROQ_CHAT_MODEL`, see `npm run check:models`). `npm run check:providers` makes one small text call to each configured provider |
+| Text fallback | Groq chat model (`GROQ_CHAT_MODEL`, default `openai/gpt-oss-120b`) as the last route for text calls when `groq` is in `LLM_PROVIDERS`. Images never go to Groq. `npm run check:models` lists valid Groq ids, `npm run check:gemini-models` lists Gemini models per key, `npm run check:providers` shows what is configured (no AI call) |
 | Hosting | Vercel |
 
 ## Getting started
 
-Prerequisites: Node.js 20 or later, a Supabase project, an OpenRouter API key (free models exist) and a Groq API key (transcription). A DeepSeek key and a Gemini key are optional.
+Prerequisites: Node.js 20 or later, a Supabase project, a Google AI Studio API key (Gemini; a second key is optional) and a Groq API key (transcription and the text fallback). Both AI services have free tiers.
 
 ```bash
 git clone https://github.com/Jeyxnth/Medora.git
@@ -75,14 +74,7 @@ npm install
 NEXT_PUBLIC_SUPABASE_URL=your-project-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key   # used only by the seed script
-LLM_PROVIDERS=openrouter,deepseek
-OPENROUTER_API_KEY=your-openrouter-key
-OPENROUTER_MODEL=nvidia/nemotron-3-super-120b-a12b:free
-OPENROUTER_FALLBACK_MODELS=apodex/apodex-1.1-mini:free
-OPENROUTER_VISION_MODEL=google/gemma-4-31b-it:free
-OPENROUTER_VISION_FALLBACK_MODELS=google/gemma-4-26b-a4b-it:free,dots-studio/dots-3-note-preview:free   # all optional: these are the defaults
-DEEPSEEK_API_KEY=optional
-# only if you add gemini to LLM_PROVIDERS:
+LLM_PROVIDERS=gemini,groq   # optional: these are the defaults
 GEMINI_API_KEY=your-gemini-key
 GEMINI_API_KEY_2=optional-second-gemini-key   # failover on quota errors (or GEMINI_API_KEYS=a,b,c)
 GEMINI_MODEL=optional-override
@@ -155,7 +147,7 @@ Limitations:
 - English only.
 - Live captions during recording use the browser speech API; Chrome is recommended.
 - Audio uploads are limited to 9 MB and recordings to 10 minutes.
-- Free-tier AI rate limits apply. When a model is rate limited or busy, it is retried once after 3 seconds, then rests for 10 seconds while the next configured route is tried (`LLM_RETRY_DELAY_MS`, `LLM_RETRY_ATTEMPTS`, `LLM_ROUTE_COOLDOWN_MS`). Each call is cut off after 15 seconds (`LLM_CALL_TIMEOUT_MS`) and one request gives up after 50 seconds in total (`LLM_TOTAL_BUDGET_MS`); DeepSeek never handles images.
+- Free-tier AI rate limits apply. When a model is rate limited or busy, it is retried once after 3 seconds, then rests for 10 seconds while the next key or model is tried (`LLM_RETRY_DELAY_MS`, `LLM_RETRY_ATTEMPTS`, `LLM_ROUTE_COOLDOWN_MS`). Each call is cut off after 25 seconds (`LLM_CALL_TIMEOUT_MS`) and one request gives up after 50 seconds in total (`LLM_TOTAL_BUDGET_MS`), then shows "AI is busy, try again". Text calls fall back to Groq as the last route; image calls never do.
 
 Roadmap:
 

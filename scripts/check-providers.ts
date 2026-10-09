@@ -1,43 +1,32 @@
-// ONE tiny text call per configured provider (OpenRouter, DeepSeek). Prints OK/FAILED. Never runs vision. Never calls Gemini.
+// Shows which AI providers, keys and models are configured. Names and counts only: no key is printed and NO AI call is made.
 // Usage: npm run check:providers
 import { config } from "dotenv";
 
 config({ path: ".env.local" });
 
-const schema = { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] };
-
 async function main() {
-  const { chatJSON } = await import("../lib/openai-compat");
   const cfg = await import("../lib/config");
-  const { OPENROUTER_URL, DEEPSEEK_URL } = await import("../lib/llm");
+  const { geminiKeys } = await import("../lib/gemini-client");
 
-  const targets = [
-    { name: "openrouter", url: OPENROUTER_URL, key: process.env.OPENROUTER_API_KEY, model: cfg.OPENROUTER_MODEL },
-    { name: "deepseek", url: DEEPSEEK_URL, key: process.env.DEEPSEEK_API_KEY, model: cfg.DEEPSEEK_MODEL },
-  ];
-  console.log(`LLM_PROVIDERS = ${cfg.LLM_PROVIDERS.join(",")}`);
-  for (const t of targets) {
-    if (!cfg.LLM_PROVIDERS.includes(t.name)) { console.log(`${t.name}: not in LLM_PROVIDERS, skipped`); continue; }
-    if (!t.key) { console.log(`${t.name}: no API key set, skipped`); continue; }
-    if (!t.model) { console.log(`${t.name}: no model set (OPENROUTER_MODEL), skipped`); continue; }
-    try {
-      await chatJSON({ url: t.url, key: t.key, model: t.model, system: "You reply with JSON.", prompt: 'Return {"ok": true}.', schema });
-      console.log(`${t.name} (${t.model}): OK`);
-    } catch (e) {
-      console.log(`${t.name} (${t.model}): FAILED (${(e as { status?: unknown }).status ?? "error"})`);
-    }
+  const keys = geminiKeys();
+  const models = [...new Set([cfg.GEMINI_MODEL, cfg.GEMINI_VISION_MODEL, ...cfg.GEMINI_FALLBACK_MODELS])];
+  const groq = !!process.env.GROQ_API_KEY;
+
+  console.log(`LLM_PROVIDERS (text)         = ${cfg.LLM_PROVIDERS.join(",") || "(none)"}`);
+  console.log(`LLM_VISION_PROVIDERS (image) = ${cfg.LLM_VISION_PROVIDERS.join(",") || "(none)"}`);
+  console.log(`\nGemini: ${keys.length} key(s) configured (${keys.map((_, i) => `#${i + 1}`).join(", ") || "none"})`);
+  console.log(`  text model:    ${cfg.GEMINI_MODEL}`);
+  console.log(`  image model:   ${cfg.GEMINI_VISION_MODEL}`);
+  console.log(`  fallbacks:     ${cfg.GEMINI_FALLBACK_MODELS.join(", ") || "none"}`);
+  console.log(`  routes per call: ${keys.length} key(s) x ${models.length} model(s) = ${keys.length * models.length}`);
+  console.log(`\nGroq key: ${groq ? "set" : "NOT set"}`);
+  console.log(`  chat (text calls only, last route): ${cfg.LLM_PROVIDERS.includes("groq") ? (groq ? cfg.GROQ_CHAT_MODEL : "listed, but no key") : "not in LLM_PROVIDERS"}`);
+  console.log(`  transcription: ${groq ? cfg.GROQ_WHISPER_MODEL : "no key, so recording cannot be transcribed"}`);
+  console.log("  images never go to Groq");
+  console.log(`\nTiming: retry ${cfg.LLM_RETRY_ATTEMPTS}x after ${cfg.LLM_RETRY_DELAY_MS} ms, route rest ${cfg.LLM_ROUTE_COOLDOWN_MS} ms, call timeout ${cfg.LLM_CALL_TIMEOUT_MS} ms, total budget ${cfg.LLM_TOTAL_BUDGET_MS} ms`);
+  if (!keys.length) console.log("\nWARNING: no Gemini key is set (GEMINI_API_KEY, GEMINI_API_KEY_2 or GEMINI_API_KEYS).");
+  for (const old of ["OPENROUTER_API_KEY", "DEEPSEEK_API_KEY", "OLLAMA_VISION_MODEL", "OLLAMA_BASE_URL"]) {
+    if (process.env[old]) console.log(`NOTE: ${old} is still in .env.local; it is no longer used and can be deleted.`);
   }
-  // Ollama: only asks the local server which models it has (GET /api/tags). No model call.
-  console.log(`LLM_VISION_PROVIDERS = ${cfg.LLM_VISION_PROVIDERS.join(",")}`);
-  try {
-    const res = await fetch(`${new URL(cfg.OLLAMA_BASE_URL).origin}/api/tags`, { signal: AbortSignal.timeout(3000) });
-    const tags = (await res.json()) as { models?: { name: string }[] };
-    const names = (tags.models ?? []).map((m) => m.name);
-    const want = cfg.OLLAMA_VISION_MODEL;
-    console.log(`ollama: OK (${names.length} model(s))${want ? `; vision model ${want} ${names.includes(want) ? "is installed" : "is NOT installed"}` : "; OLLAMA_VISION_MODEL not set, so it is skipped"}`);
-  } catch {
-    console.log("ollama: not running");
-  }
-  if (cfg.LLM_PROVIDERS.some((p) => !["openrouter", "deepseek", "ollama"].includes(p))) console.log("(other providers in LLM_PROVIDERS are not tested by this script)");
 }
 main();

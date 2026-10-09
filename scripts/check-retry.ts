@@ -1,8 +1,18 @@
 // Mock test of the failover in lib/llm.ts runRoutes(). Never calls a real provider and never really sleeps.
 // Usage: npm run check:retry
-import { runRoutes, type Route } from "../lib/llm";
-import { RouteError } from "../lib/openai-compat";
-import { AiError } from "../lib/gemini-client";
+import type { Route } from "../lib/llm";
+import { AiError, RouteError } from "../lib/gemini-client";
+
+// Fake Gemini keys and a fake Groq key, set before lib/llm is loaded. Nothing here ever reaches the network.
+process.env.GEMINI_API_KEY = "fake-key-one";
+process.env.GEMINI_API_KEY_2 = "fake-key-two";
+process.env.GEMINI_API_KEYS = "fake-key-two,fake-key-three";
+process.env.GROQ_API_KEY = "fake-groq-key";
+process.env.GEMINI_MODEL = "model-a";
+process.env.GEMINI_VISION_MODEL = "model-v";
+process.env.GEMINI_FALLBACK_MODELS = "model-b";
+process.env.LLM_PROVIDERS = "gemini,groq";
+process.env.LLM_VISION_PROVIDERS = "gemini,groq,ollama";
 
 let failed = 0;
 const check = (name: string, ok: boolean, detail = "") => {
@@ -11,9 +21,9 @@ const check = (name: string, ok: boolean, detail = "") => {
 };
 
 // A fake route: plays the given outcomes in order (an Error is thrown, anything else is returned), then repeats the last one.
-function fake(id: string, outcomes: (string | RouteError)[], local?: { timeoutMs: number }) {
+function fake(id: string, outcomes: (string | RouteError)[]) {
   const route: Route & { calls: number; lastMs: number } = {
-    id, calls: 0, lastMs: 0, local,
+    id, calls: 0, lastMs: 0,
     run: async (ms: number) => {
       route.lastMs = ms;
       const o = outcomes[Math.min(route.calls++, outcomes.length - 1)];
@@ -37,6 +47,7 @@ const log = console.warn;
 console.warn = () => {}; // keep the output to the PASS/FAIL lines
 
 async function main() {
+  const { runRoutes } = await import("../lib/llm");
   // 1. success on the first try
   {
     const c = clock(); const a = fake("a", ["ok-a"]); const b = fake("b", ["ok-b"]);
@@ -121,40 +132,31 @@ async function main() {
     const ms = Date.now() - t0;
     check("never-settling routes are cut off, error inside the budget (real timers)", msg === "AI is busy, try again" && ms < 400, `${ms} ms of a 200 ms budget`);
   }
-  // 11. API routes spend the whole budget, then local Ollama still runs with its own timeout
+  // 11. Gemini keys x models, Groq last for text only
   {
-    const c = clock();
-    const hang = (id: string) => ({ id, run: async (ms: number) => { await c.sleep(ms); throw new RouteError("timeout"); } });
-    const ollama = fake("ollama:qwen", ["ok-ollama"], { timeoutMs: 120_000 });
-    const r = await runRoutes([hang("h1"), hang("h2"), hang("h3"), ollama] as Route[], deps(c));
-    check("API routes fail (budget spent), then Ollama succeeds", r === "ok-ollama" && ollama.calls === 1, `ollama calls=${ollama.calls}`);
-    check("Ollama gets its own timeout (120s), not what is left of the budget", ollama.lastMs === 120_000, `timeout ${ollama.lastMs} ms`);
+    const { routesFor } = await import("../lib/llm");
+    const text = routesFor({ system: "s", prompt: "p", schema: {} }).map((r) => r.id);
+    check("text routes: model-a on every key (duplicates removed), then the fallbacks, then Groq last",
+      text.join() === "gemini#1:model-a,gemini#2:model-a,gemini#3:model-a,gemini#1:model-v,gemini#2:model-v,gemini#3:model-v,gemini#1:model-b,gemini#2:model-b,gemini#3:model-b,groq:openai/gpt-oss-120b",
+      text.join(" "));
+    const img = routesFor({ system: "s", prompt: "p", schema: {}, images: [{ mimeType: "image/jpeg", data: "x" }] }).map((r) => r.id);
+    check("image routes: vision model first, never Groq, only valid provider names", img[0] === "gemini#1:model-v" && img.every((id) => id.startsWith("gemini#")), img.join(" "));
+    check("no key appears in a route id", ![...text, ...img].some((id) => id.includes("fake-")));
   }
-  // 12. API fails and Ollama is not running: friendly error, one attempt, no retry
+  // 12. image call: every Gemini route fails, nothing else is tried
   {
     const c = clock();
-    const api = fake("openrouter:x", [new RouteError(404)]);
-    const ollama = fake("ollama:qwen", [new RouteError("network")], { timeoutMs: 120_000 });
+    const gem = ["gemini#1:model-v", "gemini#2:model-v"].map((id) => fake(id, [new RouteError(503)]));
     let msg = "";
-    try { await runRoutes([api, ollama], deps(c)); } catch (e) { msg = (e as Error).message; }
-    check("API fails and Ollama not running gives the friendly error", msg === "AI is busy, try again", msg);
-    check("Ollama not running: tried once, no retry, no wait", ollama.calls === 1 && c.waits.length === 0, `calls=${ollama.calls}, waits=${c.waits}`);
+    try { await runRoutes(gem, deps(c)); } catch (e) { msg = (e as Error).message; }
+    check("image call with all Gemini routes failing gives the friendly error", msg === "AI is busy, try again" && gem.every((g) => g.calls === 2), msg);
   }
-  // 13. Ollama timeout: no retry
+  // 13. text call: Gemini fails, Groq answers
   {
     const c = clock();
-    const ollama = fake("ollama:qwen", [new RouteError("timeout")], { timeoutMs: 120_000 });
-    let msg = "";
-    try { await runRoutes([ollama], deps(c)); } catch (e) { msg = (e as Error).message; }
-    check("Ollama timeout is not retried", msg === "AI is busy, try again" && ollama.calls === 1 && c.waits.length === 0, `calls=${ollama.calls}`);
-  }
-  // 14. API succeeds: Ollama is never called
-  {
-    const c = clock();
-    const api = fake("openrouter:x", ["ok-api"]);
-    const ollama = fake("ollama:qwen", ["ok-ollama"], { timeoutMs: 120_000 });
-    const r = await runRoutes([api, ollama], deps(c));
-    check("API succeeds, Ollama is never called", r === "ok-api" && ollama.calls === 0, `ollama calls=${ollama.calls}`);
+    const gem = fake("gemini#1:model-a", [new RouteError(404)]); const groq = fake("groq:x", ["ok-groq"]);
+    const r = await runRoutes([gem, groq], deps(c));
+    check("text call: Gemini failing falls back to Groq", r === "ok-groq" && gem.calls === 1 && groq.calls === 1);
   }
   console.warn = log;
   console.log(failed ? `\n${failed} check(s) FAILED` : "\nAll checks passed (mocked, no provider was called)");

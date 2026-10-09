@@ -1,11 +1,11 @@
 import Groq from "groq-sdk";
 import {
-  DEEPSEEK_MODEL, GEMINI_FALLBACK_MODELS, GEMINI_MODEL, GEMINI_VISION_MODEL, GROQ_CHAT_MODEL, LLM_PROVIDERS, LLM_VISION_PROVIDERS, OLLAMA_BASE_URL, OLLAMA_CALL_TIMEOUT_MS, OLLAMA_MODEL, OLLAMA_VISION_MODEL,
-  LLM_CALL_TIMEOUT_MS, LLM_RETRY_ATTEMPTS, LLM_RETRY_DELAY_MS, LLM_ROUTE_COOLDOWN_MS, LLM_TOTAL_BUDGET_MS, OPENROUTER_FALLBACK_MODELS, OPENROUTER_MODEL, OPENROUTER_VISION_FALLBACK_MODELS, OPENROUTER_VISION_MODEL,
+  GEMINI_FALLBACK_MODELS, GEMINI_MODEL, GEMINI_VISION_MODEL, GROQ_CHAT_MODEL, LLM_CALL_TIMEOUT_MS, LLM_PROVIDERS,
+  LLM_RETRY_ATTEMPTS, LLM_RETRY_DELAY_MS, LLM_ROUTE_COOLDOWN_MS, LLM_TOTAL_BUDGET_MS, LLM_VISION_PROVIDERS,
 } from "./config";
-import { AiError, withGemini } from "./gemini-client";
-import { chatJSON, RouteError, type Image } from "./openai-compat";
+import { AiError, geminiCall, geminiKeys, geminiRouteId, geminiRouteUsable, QuotaError, RouteError } from "./gemini-client";
 
+type Image = { mimeType: string; data: string }; // data = base64
 type Args = {
   system: string;
   prompt: string;
@@ -14,18 +14,21 @@ type Args = {
   thinking?: boolean; // Gemini only: default false (no thinking, temperature 0)
 };
 
-export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-export const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
+const parseJson = (text: string | undefined): unknown => {
+  try {
+    return JSON.parse(text ?? "");
+  } catch {
+    throw new RouteError("unreadable");
+  }
+};
 
-async function callGemini({ system, prompt, images, schema, thinking = false }: Args) {
+async function callGemini(n: number, key: string, model: string, { system, prompt, images, schema, thinking = false }: Args) {
   const parts = [
     ...(images ?? []).map((i) => ({ inlineData: { mimeType: i.mimeType, data: i.data } })),
     { text: prompt },
   ];
-  const primary = images?.length ? GEMINI_VISION_MODEL : GEMINI_MODEL;
-  const models = [...new Set([primary, GEMINI_MODEL, GEMINI_VISION_MODEL, ...GEMINI_FALLBACK_MODELS])];
-  const res = await withGemini((ai, model) => ai.models.generateContent({
-    model,
+  const res = await geminiCall(n, key, model, (ai, m) => ai.models.generateContent({
+    model: m,
     contents: [{ role: "user", parts }],
     config: {
       systemInstruction: system,
@@ -33,62 +36,60 @@ async function callGemini({ system, prompt, images, schema, thinking = false }: 
       responseJsonSchema: schema,
       ...(thinking ? {} : { temperature: 0, thinkingConfig: { thinkingBudget: 0 } }),
     },
-  }), models);
-  return JSON.parse(res.text ?? "");
+  }));
+  return parseJson(res.text);
 }
 
 async function callGroq({ system, prompt, schema }: Args) {
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-  const res = await groq.chat.completions.create({
-    model: GROQ_CHAT_MODEL,
-    response_format: { type: "json_object" },
-    messages: [
-      { role: "system", content: `${system}\nReply with JSON matching this schema:\n${JSON.stringify(schema)}` },
-      { role: "user", content: prompt },
-    ],
-  });
-  return JSON.parse(res.choices[0].message.content ?? "");
+  let content: string | null | undefined;
+  try {
+    const res = await groq.chat.completions.create({
+      model: GROQ_CHAT_MODEL,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: `${system}\nReply with JSON matching this schema:\n${JSON.stringify(schema)}` },
+        { role: "user", content: prompt },
+      ],
+    });
+    content = res.choices[0].message.content;
+  } catch (e) {
+    throw new RouteError((e as { status?: number })?.status ?? "network");
+  }
+  return parseJson(content ?? undefined);
 }
 
-// Routes for one request, in LLM_PROVIDERS order. A provider without a key (or a route without a model) is skipped.
-function routesFor(a: Args): Route[] {
+// `run` gets the time it may take; routes that cannot enforce it themselves are cut off by runRoutes.
+export type Route = { id: string; run: (timeoutMs: number) => Promise<unknown> };
+
+// Routes for one request, in provider order. Gemini: every key x every model (the primary model on all keys first, then the
+// fallback models); keys with no quota left and models that returned 404 are left out. Groq chat is the last route for
+// TEXT calls only: images never go to Groq.
+export function routesFor(a: Args): Route[] {
   const vision = !!a.images?.length;
   const routes: Route[] = [];
-  const openai = (provider: string, url: string, key: string, model: string, headers?: Record<string, string>) =>
-    routes.push({ id: `${provider}:${model}`, run: (timeoutMs) => chatJSON({ url, key, model, system: a.system, prompt: a.prompt, images: a.images, schema: a.schema, headers, timeoutMs }) });
 
   for (const p of vision ? LLM_VISION_PROVIDERS : LLM_PROVIDERS) {
-    if (p === "openrouter" && process.env.OPENROUTER_API_KEY) {
-      const models = vision ? [OPENROUTER_VISION_MODEL, ...OPENROUTER_VISION_FALLBACK_MODELS] : [OPENROUTER_MODEL, ...OPENROUTER_FALLBACK_MODELS];
-      for (const m of new Set(models.filter(Boolean))) openai("openrouter", OPENROUTER_URL, process.env.OPENROUTER_API_KEY, m, { "X-Title": "Medora" });
-    } else if (p === "deepseek" && process.env.DEEPSEEK_API_KEY && !vision) { // text only
-      openai("deepseek", DEEPSEEK_URL, process.env.DEEPSEEK_API_KEY, DEEPSEEK_MODEL);
-    } else if (p === "ollama") {
-      const model = vision ? OLLAMA_VISION_MODEL : OLLAMA_MODEL;
-      if (model) {
-        routes.push({
-          id: `ollama:${model}`,
-          local: { timeoutMs: OLLAMA_CALL_TIMEOUT_MS },
-          run: (timeoutMs) => chatJSON({ url: `${OLLAMA_BASE_URL}/chat/completions`, key: "ollama", model, system: a.system, prompt: a.prompt, images: a.images, schema: a.schema, timeoutMs }),
+    if (p === "gemini") {
+      const primary = vision ? GEMINI_VISION_MODEL : GEMINI_MODEL;
+      const models = [...new Set([primary, GEMINI_MODEL, GEMINI_VISION_MODEL, ...GEMINI_FALLBACK_MODELS])];
+      const keys = geminiKeys();
+      for (const model of models) {
+        keys.forEach((key, i) => {
+          if (geminiRouteUsable(i + 1, key, model)) routes.push({ id: geminiRouteId(i + 1, model), run: () => callGemini(i + 1, key, model, a) });
         });
       }
-    } else if (p === "gemini") {
-      routes.push({ id: "gemini", run: () => callGemini(a) });
     } else if (p === "groq" && process.env.GROQ_API_KEY && !vision) {
       routes.push({ id: `groq:${GROQ_CHAT_MODEL}`, run: () => callGroq(a) });
     }
   }
-  return [...routes.filter((r) => !r.local), ...routes.filter((r) => r.local)]; // local Ollama only after every API route
+  return routes;
 }
-
-// `run` gets the time it may take; routes that cannot enforce it themselves (Gemini, Groq) are cut off by runRoutes.
-// A `local` route (Ollama) has its own time limit that starts when it is reached, outside the request budget, and is never retried.
-export type Route = { id: string; local?: { timeoutMs: number }; run: (timeoutMs: number) => Promise<unknown> };
 
 const cooling = new Map<string, number>(); // route id -> time it may be used again (in memory only)
 
 // 429, 502, 503, 504, timeouts and network errors are worth one more try on the same route. Everything else
-// (400, 401, 402, 403, 404, other 5xx, unreadable answers, Gemini errors) goes straight to the next route.
+// (400, 401, 402, 403, 404, other 5xx, unreadable answers) goes straight to the next route.
 const RETRYABLE = new Set<unknown>([429, 502, 503, 504, "timeout", "network"]);
 const MAX_RETRY_AFTER_MS = 5000;
 
@@ -115,9 +116,8 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 
 // Tries each route in order. A route that fails with a retryable error is retried (default once, after 3 s, or after
 // its Retry-After if that is 1-5 s; a longer Retry-After skips the retry). After that the route rests for the cooldown
-// (default 10 s) and the next route is tried. Each call is cut off after the call timeout, and the API routes together
-// (calls plus retry waits) have a time budget: once it is spent no further API route is tried. Local routes (Ollama)
-// are not part of that budget: each gets its own timeout when reached, with no retry. No whole-list retry: if every
+// (default 10 s) and the next route is tried. Each call is cut off after the call timeout, and the whole request
+// (calls plus retry waits) has a time budget: once it is spent no further route is tried. No whole-list retry: if every
 // route fails, throws a friendly AiError.
 export async function runRoutes<T>(all: Route[], deps: Deps = {}): Promise<T> {
   const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
@@ -135,20 +135,15 @@ export async function runRoutes<T>(all: Route[], deps: Deps = {}): Promise<T> {
   for (const r of ready.length ? ready : all) { // everything resting: try each once rather than fail without a call
     for (let attempt = 0; ; attempt++) {
       const left = deadline - now();
-      if (!r.local && left <= 0) {
-        console.warn(`[ai] time budget spent, skipping ${r.id}`);
-        break;
+      if (left <= 0) {
+        console.warn("[ai] time budget spent, giving up");
+        throw new AiError("AI is busy, try again");
       }
       try {
-        const ms = r.local ? r.local.timeoutMs : Math.min(callTimeout, left);
+        const ms = Math.min(callTimeout, left);
         return (await withTimeout(r.run(ms), ms)) as T;
       } catch (e) {
         const status = statusOf(e);
-        if (r.local) { // Ollama: never retried
-          rest.set(r.id, now() + cooldown);
-          console.warn(status === "network" ? `[ai] ${r.id} is not running, skipped` : `[ai] ${r.id} failed (${status}), no retry`);
-          break;
-        }
         const after = e instanceof RouteError ? e.retryAfterMs : undefined;
         const wait = after !== undefined && after >= 1000 ? after : delay;
         const canRetry =
@@ -167,4 +162,9 @@ export async function runRoutes<T>(all: Route[], deps: Deps = {}): Promise<T> {
   throw new AiError("AI is busy, try again");
 }
 
-export const generateJSON = <T = unknown>(args: Args): Promise<T> => runRoutes<T>(routesFor(args));
+export function generateJSON<T = unknown>(args: Args): Promise<T> {
+  const routes = routesFor(args);
+  // Keys are set but every route is left out: all keys are resting after a quota error.
+  if (!routes.length && geminiKeys().length) return Promise.reject(new QuotaError());
+  return runRoutes<T>(routes);
+}
