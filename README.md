@@ -129,6 +129,7 @@ To see the nurse view, sign in as the nurse: approving, discarding and the audit
 | Record consultations | yes | yes |
 | Ask Medora | yes | yes |
 | View the audit log | yes | - |
+| Export a FHIR bundle | yes | - |
 | Confirm follow-up tasks | yes | - |
 | Dismiss follow-up tasks | yes | - |
 | Mark tasks done | yes | yes |

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, Upload, Mic, Phone, Pill } from "lucide-react";
+import { AlertTriangle, Download, Upload, Mic, Phone, Pill } from "lucide-react";
+import { FHIR_DISCLAIMER } from "@/lib/fhir";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import { buildTimeline } from "@/lib/timeline";
@@ -110,6 +111,15 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
           </Link>}
         </div>
       </div>
+
+      {can(role, "export_fhir") && (
+        <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs text-slate-500">
+          <span>{FHIR_DISCLAIMER}</span>
+          <a href={`/api/fhir/${id}`} download className="flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            <Download size={14} /> Download FHIR bundle (JSON)
+          </a>
+        </div>
+      )}
 
       {allergyList.length > 0 ? (
         <div id="allergies" className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
