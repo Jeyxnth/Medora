@@ -50,7 +50,7 @@ const nstr = { type: ["string", "null"] };
 const nnum = { type: ["number", "null"] };
 const conf = { type: "string", enum: ["high", "medium", "low"] };
 
-const SCHEMA = {
+export const SCHEMA = {
   type: "object",
   properties: {
     doc_type: { type: "string", enum: ["lab_report", "prescription", "other"] },
@@ -91,7 +91,7 @@ const SCHEMA = {
   required: ["doc_type", "document_date", "patient_name", "prescriber", "lab_name", "lab_results", "medications", "notes", "date_confidence", "prescriber_confidence"],
 };
 
-const SYSTEM = `You transcribe medical documents (lab reports, prescriptions) into structured JSON.
+export const SYSTEM = `You transcribe medical documents (lab reports, prescriptions) into structured JSON.
 Rules:
 - Transcribe exactly what is printed. Never guess or infer missing values; use null instead.
 - Never compute flags or reference ranges yourself. printed_flag is only a flag printed on the document (e.g. "H", "L", "High"), else null.

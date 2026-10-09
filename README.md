@@ -47,7 +47,7 @@ There is no vector database. For each question, one patient's approved records a
 | UI | React 19, TypeScript, Tailwind CSS |
 | Charts and icons | Recharts, lucide-react |
 | Database, auth, storage | Supabase (Postgres with row-level security, Auth, Storage) |
-| Extraction, notes, Q&A | Google Gemini Flash (`GEMINI_MODEL`, default `gemini-flash-latest`) |
+| Extraction, notes, Q&A | Google Gemini Flash (`GEMINI_MODEL`, default `gemini-3.8-flash`, fallback `gemini-3.7-flash`) |
 | Transcription | Groq Whisper (`GROQ_WHISPER_MODEL`, default `whisper-large-v3-turbo`) |
 | Text fallback | Groq chat model (`GROQ_CHAT_MODEL`, default `openai/gpt-oss-120b`), used when every Gemini key is out of quota. `npm run check:models` lists valid ids |
 | Hosting | Vercel |

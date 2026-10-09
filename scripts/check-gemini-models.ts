@@ -11,7 +11,7 @@ async function main() {
   const keys = [...new Set(all.map((k) => k?.trim()).filter((k): k is string => !!k))];
   if (!keys.length) return console.error("No GEMINI_API_KEY set in .env.local");
 
-  const wanted = [process.env.GEMINI_MODEL || "gemini-flash-latest", process.env.GEMINI_VISION_MODEL || process.env.GEMINI_MODEL || "gemini-flash-latest"];
+  const wanted = [process.env.GEMINI_MODEL || "gemini-3.8-flash", process.env.GEMINI_VISION_MODEL || process.env.GEMINI_MODEL || "gemini-3.8-flash"];
   const lists: Set<string>[] = [];
   for (const [i, key] of keys.entries()) {
     console.log(`\nKey #${i + 1}`);
