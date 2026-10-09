@@ -42,6 +42,7 @@ Rules:
 - If the records do not contain the answer, set not_found to true and say in one statement what is missing. Never guess.
 - Do not write source ids in the statement text; put them only in the sources array.
 - Keep each statement short and include the values and dates exactly as written in the records. Copy numbers exactly; do not compute new numbers or counts.
+- When the question is about a change or trend, state the direction in plain words using only values from the cited records, for example "creatinine rose from 0.9 to 1.9 mg/dL and eGFR fell from 78 to 34, indicating worsening kidney function". Only describe a direction the cited values show; do not add a conclusion the records do not support.
 - No treatment recommendations and no diagnoses that are not already in the records.
 - follow_ups: up to 3 short, useful follow-up questions the records could answer. Empty if not_found.`;
 

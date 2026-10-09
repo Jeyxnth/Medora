@@ -43,6 +43,7 @@ export default function AskMedora({ patientId }: { patientId: string }) {
     setQuestion(q);
     run({ question: q.trim() });
   };
+  const seen = new Set<string>();
   const chip = "rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 hover:border-teal-400 hover:bg-teal-50 disabled:opacity-50";
 
   return (
@@ -92,7 +93,10 @@ export default function AskMedora({ patientId }: { patientId: string }) {
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   {s.sources.map((id) => {
                     const src = result.sources[id];
-                    return src && (
+                    const key = `${src?.href}|${src?.label}`;
+                    if (!src || seen.has(key)) return null; // each distinct source shown once per answer
+                    seen.add(key);
+                    return (
                       <Link key={id} href={src.href} className="flex items-center gap-1 rounded-md bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800 ring-1 ring-teal-200 hover:bg-teal-100">
                         <FileText size={11} /> {src.label}
                       </Link>
