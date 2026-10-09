@@ -31,7 +31,7 @@ const mkLabs = (date: string, labs: Lab[]) =>
 
 const patients = [
   {
-    p: { name: "Meera Iyer", dob: "1967-03-14", sex: "F", mrn: "MRN-1001", phone: "+91 98400 11001" },
+    p: { name: "Sasha Santosh", dob: "1967-03-14", sex: "F", mrn: "MRN-1001", phone: "+91 98400 11001" },
     allergies: [{ substance: "Penicillin", reaction: "Rash" }],
     encounters: [
       { encounter_date: "2025-04-10", type: "Follow-up", summary: "Type 2 diabetes and hypertension review. HbA1c 7.1%, BP 132/84. Continue metformin and amlodipine." },

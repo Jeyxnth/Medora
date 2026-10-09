@@ -101,9 +101,9 @@ The login page also has buttons that fill these in. For a faster production run,
 
 ## Demo walkthrough
 
-The demo patient is Meera Iyer (MRN-1001), who has type 2 diabetes, hypertension, declining kidney function and a penicillin allergy. Sample documents are in `sample-docs/`: a lab report and an outside prescription, each as a clean image and as a phone photo.
+The demo patient is Sasha Santosh (MRN-1001), who has type 2 diabetes, hypertension, declining kidney function and a penicillin allergy. Sample documents are in `sample-docs/`: a lab report and an outside prescription, each as a clean image and as a phone photo.
 
-1. Sign in as the doctor and open Meera Iyer from the patient list.
+1. Sign in as the doctor and open Sasha Santosh from the patient list.
 2. Choose Upload report and upload `1_meera_lab_report_clean.png` (or the phone-photo version).
 3. Review the extraction beside the source image, fix anything flagged, and approve. The labs appear in the timeline and trends.
 4. Upload `3_meera_prescription_clean.png`. In the review screen the safety panel shows the alerts for the new medicines, such as the penicillin allergy conflict. Approve it after ticking the reviewed box.
