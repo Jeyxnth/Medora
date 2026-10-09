@@ -47,14 +47,14 @@ There is no vector database. For each question, one patient's approved records a
 | UI | React 19, TypeScript, Tailwind CSS |
 | Charts and icons | Recharts, lucide-react |
 | Database, auth, storage | Supabase (Postgres with row-level security, Auth, Storage) |
-| Extraction, notes, Q&A | Google Gemini Flash (`GEMINI_MODEL`, default `gemini-3.8-flash`, fallback `gemini-3.7-flash`) |
+| Extraction, notes, Q&A | OpenRouter (`OPENROUTER_MODEL` for text, `OPENROUTER_VISION_MODEL` for images, `OPENROUTER_FALLBACK_MODELS`), then DeepSeek for text (`DEEPSEEK_MODEL`). Order is set by `LLM_PROVIDERS` (default `openrouter,deepseek`); Gemini is optional and off unless you add `gemini` |
 | Transcription | Groq Whisper (`GROQ_WHISPER_MODEL`, default `whisper-large-v3-turbo`) |
-| Text fallback | Groq chat model (`GROQ_CHAT_MODEL`, default `openai/gpt-oss-120b`), used when every Gemini key is out of quota. `npm run check:models` lists valid ids |
+| Optional extra providers | `gemini` (keys and models via `GEMINI_*`, see `npm run check:gemini-models`) and `groq` chat (`GROQ_CHAT_MODEL`, see `npm run check:models`). `npm run check:providers` makes one small text call to each configured provider |
 | Hosting | Vercel |
 
 ## Getting started
 
-Prerequisites: Node.js 20 or later, a Supabase project, a Google AI Studio API key (Gemini) and a Groq API key. Both AI services have free tiers.
+Prerequisites: Node.js 20 or later, a Supabase project, an OpenRouter API key (free models exist) and a Groq API key (transcription). A DeepSeek key and a Gemini key are optional.
 
 ```bash
 git clone https://github.com/Jeyxnth/Medora.git
@@ -74,6 +74,14 @@ npm install
 NEXT_PUBLIC_SUPABASE_URL=your-project-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key   # used only by the seed script
+LLM_PROVIDERS=openrouter,deepseek
+OPENROUTER_API_KEY=your-openrouter-key
+OPENROUTER_MODEL=nvidia/nemotron-3-super-120b-a12b:free
+OPENROUTER_FALLBACK_MODELS=apodex/apodex-1.1-mini:free
+OPENROUTER_VISION_MODEL=google/gemma-4-31b-it:free
+OPENROUTER_VISION_FALLBACK_MODELS=google/gemma-4-26b-a4b-it:free,dots-studio/dots-3-note-preview:free   # all optional: these are the defaults
+DEEPSEEK_API_KEY=optional
+# only if you add gemini to LLM_PROVIDERS:
 GEMINI_API_KEY=your-gemini-key
 GEMINI_API_KEY_2=optional-second-gemini-key   # failover on quota errors (or GEMINI_API_KEYS=a,b,c)
 GEMINI_MODEL=optional-override
@@ -146,7 +154,7 @@ Limitations:
 - English only.
 - Live captions during recording use the browser speech API; Chrome is recommended.
 - Audio uploads are limited to 9 MB and recordings to 10 minutes.
-- Free-tier AI rate limits apply. When Gemini is rate limited, the text steps fall back to Groq Llama; image extraction has no fallback.
+- Free-tier AI rate limits apply. When a model is rate limited or busy, the next configured route is tried (and put on a short cooldown); DeepSeek never handles images.
 
 Roadmap:
 

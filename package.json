@@ -13,7 +13,8 @@
     "check:models": "tsx scripts/check-models.ts",
     "check:gemini-models": "tsx scripts/check-gemini-models.ts",
     "check:care-gaps": "tsx scripts/check-care-gaps.ts",
-    "fhir:check": "tsx scripts/check-fhir.ts"
+    "fhir:check": "tsx scripts/check-fhir.ts",
+    "check:providers": "tsx scripts/check-providers.ts"
   },
   "dependencies": {
     "@google/genai": "^2.27.0",

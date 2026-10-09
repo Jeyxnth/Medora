@@ -1,0 +1,32 @@
+// ONE tiny text call per configured provider (OpenRouter, DeepSeek). Prints OK/FAILED. Never runs vision. Never calls Gemini.
+// Usage: npm run check:providers
+import { config } from "dotenv";
+
+config({ path: ".env.local" });
+
+const schema = { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] };
+
+async function main() {
+  const { chatJSON } = await import("../lib/openai-compat");
+  const cfg = await import("../lib/config");
+  const { OPENROUTER_URL, DEEPSEEK_URL } = await import("../lib/llm");
+
+  const targets = [
+    { name: "openrouter", url: OPENROUTER_URL, key: process.env.OPENROUTER_API_KEY, model: cfg.OPENROUTER_MODEL },
+    { name: "deepseek", url: DEEPSEEK_URL, key: process.env.DEEPSEEK_API_KEY, model: cfg.DEEPSEEK_MODEL },
+  ];
+  console.log(`LLM_PROVIDERS = ${cfg.LLM_PROVIDERS.join(",")}`);
+  for (const t of targets) {
+    if (!cfg.LLM_PROVIDERS.includes(t.name)) { console.log(`${t.name}: not in LLM_PROVIDERS, skipped`); continue; }
+    if (!t.key) { console.log(`${t.name}: no API key set, skipped`); continue; }
+    if (!t.model) { console.log(`${t.name}: no model set (OPENROUTER_MODEL), skipped`); continue; }
+    try {
+      await chatJSON({ url: t.url, key: t.key, model: t.model, system: "You reply with JSON.", prompt: 'Return {"ok": true}.', schema });
+      console.log(`${t.name} (${t.model}): OK`);
+    } catch (e) {
+      console.log(`${t.name} (${t.model}): FAILED (${(e as { status?: unknown }).status ?? "error"})`);
+    }
+  }
+  if (cfg.LLM_PROVIDERS.some((p) => !["openrouter", "deepseek"].includes(p))) console.log("(other providers in LLM_PROVIDERS are not tested by this script)");
+}
+main();
