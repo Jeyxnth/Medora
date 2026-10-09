@@ -1,6 +1,6 @@
-import { GoogleGenAI } from "@google/genai";
 import Groq from "groq-sdk";
-import { GEMINI_MODEL, GROQ_TEXT_MODEL } from "./config";
+import { GEMINI_MODEL, GROQ_CHAT_MODEL } from "./config";
+import { AiError, withGemini } from "./gemini-client";
 
 type Image = { mimeType: string; data: string }; // data = base64
 type Args = {
@@ -11,17 +11,12 @@ type Args = {
   thinking?: boolean; // default false: no thinking, temperature 0
 };
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const is429 = (e: unknown) =>
-  (e as { status?: number })?.status === 429 || String((e as Error)?.message).includes("429");
-
 async function callGemini({ system, prompt, images, schema, thinking = false }: Args) {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   const parts = [
     ...(images ?? []).map((i) => ({ inlineData: { mimeType: i.mimeType, data: i.data } })),
     { text: prompt },
   ];
-  const res = await ai.models.generateContent({
+  const res = await withGemini((ai) => ai.models.generateContent({
     model: GEMINI_MODEL,
     contents: [{ role: "user", parts }],
     config: {
@@ -30,14 +25,14 @@ async function callGemini({ system, prompt, images, schema, thinking = false }: 
       responseJsonSchema: schema,
       ...(thinking ? {} : { temperature: 0, thinkingConfig: { thinkingBudget: 0 } }),
     },
-  });
+  }));
   return JSON.parse(res.text ?? "");
 }
 
 async function callGroq({ system, prompt, schema }: Args) {
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
   const res = await groq.chat.completions.create({
-    model: GROQ_TEXT_MODEL,
+    model: GROQ_CHAT_MODEL,
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: `${system}\nReply with JSON matching this schema:\n${JSON.stringify(schema)}` },
@@ -47,19 +42,20 @@ async function callGroq({ system, prompt, schema }: Args) {
   return JSON.parse(res.choices[0].message.content ?? "");
 }
 
+// Gemini (all keys) first; if that fails, a Groq text model for text-only requests.
+// Throws AiError with a message that is safe to show to the user.
 export async function generateJSON<T = unknown>(args: Args): Promise<T> {
-  for (let attempt = 1; ; attempt++) {
+  try {
+    return await callGemini(args);
+  } catch (e) {
+    if (!(e instanceof AiError)) throw new AiError("The AI response could not be read, try again");
+    if (args.images?.length || !process.env.GROQ_API_KEY) throw e; // Groq text model can't read images
+    console.warn(`[ai] Gemini unavailable (${e.message}), falling back to Groq ${GROQ_CHAT_MODEL}`);
     try {
-      return await callGemini(args);
-    } catch (e) {
-      if (!is429(e)) throw e;
-      if (attempt < 3) {
-        console.warn(`Gemini 429, retry ${attempt}/2 in 5s`);
-        await sleep(5000);
-        continue;
-      }
-      if (args.images?.length) throw e; // Groq text model can't read images
-      return callGroq(args);
+      return await callGroq(args);
+    } catch (g) {
+      console.error(`[ai] Groq fallback failed (${(g as { status?: number })?.status ?? "error"})`);
+      throw new AiError(`${e.message}. The backup AI service is also unavailable.`);
     }
   }
 }

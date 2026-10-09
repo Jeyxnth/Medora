@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import { can } from "@/lib/permissions";
 import { currentRole, currentUser } from "@/lib/roles";
+import { AiError } from "@/lib/gemini-client";
 import { generateJSON } from "@/lib/llm";
 import { buildPatientContext, type Source } from "@/lib/records";
 import { stripSourceIds, verifyStatement } from "@/lib/verify-ask";
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
   try {
     raw = await generateJSON<Raw>({ system: SYSTEM, prompt: `RECORDS (id | kind | details):\n${text}\n\nWrite the pre-visit brief.`, schema: SCHEMA });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "AI request failed" }, { status: 502 });
+    return NextResponse.json({ error: e instanceof AiError ? e.message : "AI request failed" }, { status: 502 });
   }
 
   const used: BriefResult["sources"] = {};

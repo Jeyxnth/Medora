@@ -31,7 +31,7 @@ Keep code simple, small files, no over-engineering, no tests unless asked, no ne
 - `app/login` — login page (demo fill buttons). `app/(app)/` — shell layout with `components/Header.tsx`.
 - `app/(app)/patients` (list), `patients/[id]` (patient page), `upload` and `consult` placeholders.
 - `components/` — Header, LogoutButton, PatientList, Timeline.
-- `lib/llm.ts` — `generateJSON({ system, prompt, images?, schema })`: Gemini (inline base64 images), Groq text fallback on 429.
+- `lib/llm.ts` — `generateJSON({ system, prompt, images?, schema })`: Gemini (inline base64 images) via `lib/gemini-client.ts` `withGemini()` (keys GEMINI_API_KEY / _2 / GEMINI_API_KEYS, failover on quota/5xx, exhausted keys skipped in memory for retryDelay); Groq text fallback (`GROQ_CHAT_MODEL`); failures throw `AiError` with a user-safe message. Models in `lib/config.ts` (env overrides); `npm run check:models` lists Groq models. If AI fails after transcription, consult saves the transcript as an empty draft note.
 - `lib/extract.ts` — `extractDocument(image, mimeType)`: Gemini vision -> raw `Extraction` (lab results / medications), transcribe-only.
 - `lib/validate.ts` — `validateExtraction()`: canonical test names, computed H/L/N flag, per-row `issues` + `status` ok|check.
 - `scripts/test-extract.ts` — `npm run test-extract`: runs sample-docs/* through extract+validate, prints tables, saves JSON to sample-docs/out/.

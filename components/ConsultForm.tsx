@@ -143,7 +143,7 @@ export default function ConsultForm({ patientId }: { patientId: string }) {
       stepTimers.current.forEach(clearTimeout);
       if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`);
       setStep(3);
-      router.push(`/patients/${patientId}/notes/${json.noteId}`);
+      router.push(`/patients/${patientId}/notes/${json.noteId}${json.warning ? `?notice=${encodeURIComponent(json.warning)}` : ""}`);
     } catch (e) {
       stepTimers.current.forEach(clearTimeout);
       setStep(-1);

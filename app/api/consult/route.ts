@@ -6,7 +6,8 @@ import { can } from "@/lib/permissions";
 import { currentRole, currentUser } from "@/lib/roles";
 import { GROQ_WHISPER_MODEL } from "@/lib/config";
 import { ageFromDob } from "@/lib/utils";
-import { draftNote, splitTranscript, transcriptText } from "@/lib/scribe";
+import { draftNote, emptyNote, splitTranscript, transcriptText } from "@/lib/scribe";
+import { AiError } from "@/lib/gemini-client";
 
 export const maxDuration = 60;
 
@@ -23,6 +24,9 @@ async function transcribe(file: File, hint: string): Promise<Seg[]> {
     response_format: "verbose_json",
     temperature: 0,
     ...(hint ? { prompt: hint } : {}),
+  }).catch((e) => {
+    console.error(`[transcribe] Groq failed (${e?.status ?? "error"})`);
+    throw new AiError("Transcription is unavailable right now. Try again later, or paste a transcript instead.");
   })) as unknown as { text?: string; segments?: { start: number; end: number; text: string }[] };
   const segs = (res.segments ?? []).filter((s) => s.text?.trim());
   if (segs.length) return segs.map((s, i) => ({ id: i + 1, start: s.start, end: s.end, text: s.text.trim() }));
@@ -60,10 +64,16 @@ export async function POST(req: Request) {
         : splitTranscript(text);
     if (!segments.length) return NextResponse.json({ error: "No speech found in the recording." }, { status: 422 });
 
+    // If the AI is unavailable the transcript is still saved as a draft, so the recording is not lost.
+    let warning: string | undefined;
     const content = await draftNote({
       segments,
       patient: { name: patient.name, age: ageFromDob(patient.dob), sex: patient.sex },
       activeMeds,
+    }).catch((e) => {
+      if (!(e instanceof AiError)) throw e;
+      warning = `${e.message}. The transcript was saved as a draft; write the note by hand or try again later.`;
+      return emptyNote(segments);
     });
 
     const { data: note, error } = await supabase
@@ -79,8 +89,9 @@ export async function POST(req: Request) {
       .single();
     if (error) throw new Error(error.message);
     await logAudit({ action: "create_note", entityType: "clinical_note", entityId: note.id, patientId });
-    return NextResponse.json({ noteId: note.id });
+    return NextResponse.json({ noteId: note.id, warning });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message || "Could not create the note" }, { status: 500 });
+    const friendly = e instanceof AiError ? e.message : "Could not create the note";
+    return NextResponse.json({ error: friendly }, { status: e instanceof AiError ? 503 : 500 });
   }
 }

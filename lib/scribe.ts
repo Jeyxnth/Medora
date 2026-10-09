@@ -155,5 +155,15 @@ ${segments.map((s) => `[${s.id}] ${s.hint ? `${s.hint === "doctor" ? "Doctor" : 
   };
 }
 
+// When the AI is unavailable: keep the transcript (audio is never stored) as a draft with an empty SOAP note to write by hand.
+export function emptyNote(segments: RawSegment[]): NoteContent {
+  return {
+    segments: segments.map(({ hint, ...s }) => ({ ...s, speaker: hint ?? "other" })),
+    soap: { subjective: [], objective: [], assessment: [], plan: [] },
+    med_changes: [],
+    not_discussed: [],
+  };
+}
+
 export const transcriptText = (segments: Segment[]) =>
   segments.map((s) => `${s.speaker === "doctor" ? "Doctor" : s.speaker === "patient" ? "Patient" : "Other"}: ${s.text}`).join("\n");
