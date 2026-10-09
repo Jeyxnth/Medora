@@ -11,7 +11,8 @@
     "test-extract": "tsx scripts/test-extract.ts",
     "permissions-table": "tsx scripts/permissions-table.ts",
     "check:models": "tsx scripts/check-models.ts",
-    "check:gemini-models": "tsx scripts/check-gemini-models.ts"
+    "check:gemini-models": "tsx scripts/check-gemini-models.ts",
+    "check:care-gaps": "tsx scripts/check-care-gaps.ts"
   },
   "dependencies": {
     "@google/genai": "^2.27.0",

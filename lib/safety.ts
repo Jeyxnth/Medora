@@ -93,6 +93,9 @@ function classesOf(n: string): Set<string> {
   }
   return out;
 }
+// Class keys (e.g. "nsaid", "ace_inhibitor") a drug name belongs to.
+export const drugClasses = (name: string): Set<string> => classesOf(normalizeDrug(name));
+
 // A token is a generic name or a class key.
 const hasToken = (n: string, token: string) => components(n).includes(token) || n === token || classesOf(n).has(token);
 

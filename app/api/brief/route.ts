@@ -9,6 +9,7 @@ import { buildPatientContext, type Source } from "@/lib/records";
 import { stripSourceIds, verifyStatement } from "@/lib/verify-ask";
 import { loadSafetyContext } from "@/lib/safety-context";
 import { checkSafety, type Alert } from "@/lib/safety";
+import { careGaps, type CareGap } from "@/lib/care-gaps";
 import { groupSeries, trendInsights, type Insight, type TrendLab } from "@/lib/trends";
 import type { AskStatement } from "@/app/api/ask/route";
 
@@ -21,6 +22,7 @@ export type BriefResult = {
   discuss: AskStatement[];
   trends: Insight[];
   alerts: Alert[];
+  careGaps: CareGap[];
   tasks: BriefTask[];
   sources: Record<string, Pick<Source, "id" | "label" | "href">>;
 };
@@ -77,10 +79,13 @@ export async function POST(req: Request) {
     });
 
   // Trends, alerts and tasks come straight from code, not from the AI.
-  const [safety, labs, tasks] = await Promise.all([
+  const [safety, labs, tasks, encounters, allMeds, allTasks] = await Promise.all([
     loadSafetyContext(supabase, patientId),
     supabase.from("lab_results").select("*").eq("patient_id", patientId),
     supabase.from("tasks").select("id, title, due_date").eq("patient_id", patientId).eq("status", "open").order("due_date", { nullsFirst: false }),
+    supabase.from("encounters").select("id, encounter_date, summary").eq("patient_id", patientId),
+    supabase.from("medications").select("id, drug_name, end_date").eq("patient_id", patientId),
+    supabase.from("tasks").select("status").eq("patient_id", patientId),
   ]);
   const today = new Date().toISOString().slice(0, 10);
 
@@ -89,6 +94,10 @@ export async function POST(req: Request) {
     discuss: check(raw.discuss, 3),
     trends: trendInsights(groupSeries((labs.data ?? []) as TrendLab[])),
     alerts: checkSafety({ patientId, ...safety }),
+    careGaps: careGaps({
+      today, encounters: encounters.data ?? [], medications: allMeds.data ?? [],
+      labs: (labs.data ?? []) as TrendLab[], tasks: allTasks.data ?? [],
+    }),
     tasks: (tasks.data ?? []).map((t) => ({ ...t, overdue: !!t.due_date && t.due_date < today })),
     sources: used,
   };

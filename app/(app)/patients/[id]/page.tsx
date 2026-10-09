@@ -13,6 +13,8 @@ import type { TrendLab } from "@/lib/trends";
 import Avatar from "@/components/Avatar";
 import Timeline from "@/components/Timeline";
 import SafetyAlerts from "@/components/SafetyAlerts";
+import CareGaps from "@/components/CareGaps";
+import { careGaps } from "@/lib/care-gaps";
 import TrendsCard from "@/components/TrendsCard";
 import AskMedora from "@/components/AskMedora";
 import FocusHighlight from "@/components/FocusHighlight";
@@ -65,6 +67,13 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
   });
   const noteDates = Object.fromEntries((notes.data ?? []).map((n) => [n.id as string, String(n.created_at).slice(0, 10)]));
   const allergyList = allergies.data ?? [];
+  const gaps = careGaps({
+    today,
+    encounters: encounters.data ?? [],
+    medications: meds.data ?? [],
+    labs: (labs.data ?? []) as TrendLab[],
+    tasks: tasks.data ?? [],
+  });
   const alerts = checkSafety({ patientId: id, allergies: allergyList, activeMeds, labs: labs.data ?? [] });
   const card = "card p-5";
   const chip = "flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-sm text-slate-700";
@@ -113,6 +122,10 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
 
       <div className={card}>
         <SafetyAlerts alerts={alerts} />
+      </div>
+
+      <div className={card}>
+        <CareGaps gaps={gaps} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">

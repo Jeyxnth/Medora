@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AlertTriangle, ClipboardList, FileText, Loader2, Printer, X } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import SafetyAlerts from "@/components/SafetyAlerts";
+import CareGaps from "@/components/CareGaps";
 import type { BriefResult } from "@/app/api/brief/route";
 import type { AskStatement } from "@/app/api/ask/route";
 
@@ -101,6 +102,8 @@ export default function PreVisitBrief({ patientId, patientName }: { patientId: s
 
                 <section><SafetyAlerts alerts={brief.alerts} title="Active safety alerts" /></section>
 
+                <section><CareGaps gaps={brief.careGaps} onNavigate={() => setOpen(false)} /></section>
+
                 <section>
                   <h3 className={h}>Open and overdue tasks</h3>
                   {brief.tasks.length === 0 ? <p className="text-sm text-slate-500">No open tasks.</p> : (
@@ -117,7 +120,7 @@ export default function PreVisitBrief({ patientId, patientName }: { patientId: s
                 </section>
 
                 <section><h3 className={h}>Suggested things to discuss</h3>{statements(brief.discuss)}</section>
-                <p className="text-xs text-slate-500">AI-generated from approved records only. Trends, alerts and tasks come from the records directly. Verify before acting.</p>
+                <p className="text-xs text-slate-500">AI-generated from approved records only. Trends, alerts, care gaps and tasks come from the records directly. Verify before acting.</p>
               </>
             )}
           </div>
