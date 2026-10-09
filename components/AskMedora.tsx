@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, FileText, Loader2, Send, Sparkles } from "lucide-react";
+import { AlertTriangle, FileText, Loader2, Send, MessageSquareText } from "lucide-react";
 import { focusItem } from "@/lib/focus";
 import type { AskResult } from "@/app/api/ask/route";
 
@@ -45,11 +45,12 @@ export default function AskMedora({ patientId }: { patientId: string }) {
     run({ question: q.trim() });
   };
   const seen = new Set<string>();
-  const chip = "rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 hover:border-teal-400 hover:bg-teal-50 disabled:opacity-50";
+  const chip = "rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 hover:border-brand-400 hover:bg-brand-50 disabled:opacity-50";
 
   return (
-    <div className="card p-5">
-      <h2 className="card-title mb-3 flex items-center gap-2"><Sparkles size={16} className="text-teal-600" /> Ask Medora</h2>
+    <div id="ask" className="card p-5 scroll-mt-20">
+      <p className="eyebrow">Assistant</p>
+      <h2 className="card-title mb-3 flex items-center gap-2"><MessageSquareText size={16} className="text-brand-600" /> Ask Medora</h2>
 
       <form onSubmit={(e) => { e.preventDefault(); send(question); }} className="flex gap-2">
         <input
@@ -57,12 +58,12 @@ export default function AskMedora({ patientId }: { patientId: string }) {
           onChange={(e) => setQuestion(e.target.value)}
           maxLength={500}
           placeholder="Ask about this patient, e.g. When was her last HbA1c?"
-          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         />
-        <button disabled={loading || !question.trim()} className="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50">
+        <button disabled={loading || !question.trim()} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
           {loading ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />} Send
         </button>
-        <button type="button" disabled={loading} onClick={() => run({ mode: "summary" })} className="rounded-lg border border-teal-600 px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50 disabled:opacity-50">
+        <button type="button" disabled={loading} onClick={() => run({ mode: "summary" })} className="rounded-lg border border-brand-600 px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-50">
           Summarize patient
         </button>
       </form>
@@ -73,7 +74,7 @@ export default function AskMedora({ patientId }: { patientId: string }) {
 
       {loading && (
         <div className="mt-4 space-y-2" role="status">
-          <p className="flex items-center gap-2 text-sm text-slate-600"><Loader2 size={16} className="animate-spin text-teal-600" /> Reading approved records...</p>
+          <p className="flex items-center gap-2 text-sm text-slate-600"><Loader2 size={16} className="animate-spin text-brand-600" /> Reading approved records...</p>
           <div className="animate-pulse space-y-2"><div className="h-3 w-11/12 rounded bg-slate-200" /><div className="h-3 w-3/4 rounded bg-slate-200" /><div className="h-3 w-1/2 rounded bg-slate-100" /></div>
         </div>
       )}
@@ -97,7 +98,7 @@ export default function AskMedora({ patientId }: { patientId: string }) {
                     const key = `${src?.href}|${src?.label}`;
                     if (!src || seen.has(key)) return null; // each distinct source shown once per answer
                     seen.add(key);
-                    const cls = "flex items-center gap-1 rounded-md bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800 ring-1 ring-teal-200 hover:bg-teal-100";
+                    const cls = "flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-800 ring-1 ring-brand-200 hover:bg-brand-100";
                     // Same-page records scroll to and flash the item (works on every click); documents and notes open their page.
                     return src.focus ? (
                       <button key={id} type="button" onClick={() => focusItem(src.focus!)} className={cls}>

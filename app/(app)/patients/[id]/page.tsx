@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, Download, Upload, Mic, Phone, Pill } from "lucide-react";
+import { AlertTriangle, Download, MessageSquareText, Upload, Mic, Phone, Pill } from "lucide-react";
 import { FHIR_DISCLAIMER } from "@/lib/fhir";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
@@ -80,36 +80,41 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
   const chip = "flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-sm text-slate-700";
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <FocusHighlight />
-      <Link href="/patients" className="text-sm text-teal-700 hover:underline">← All patients</Link>
+      <Link href="/patients" className="text-sm text-brand-700 hover:underline">← All patients</Link>
 
       {typeof notice === "string" && (
         <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{notice}</p>
       )}
 
-      <div className={`${card} flex flex-wrap items-center justify-between gap-4`}>
-        <div className="flex items-center gap-4">
-          <Avatar name={patient.name} size="lg" />
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-900">{patient.name}</h1>
-            <p className="mt-2 flex flex-wrap items-center gap-2">
-              <span className={chip}>{ageFromDob(patient.dob) ?? "?"} y</span>
-              <span className={chip}>{patient.sex ?? "—"}</span>
-              <span className={chip}>MRN {patient.mrn ?? "—"}</span>
-              <span className={chip}><Phone size={13} />{patient.phone ?? "—"}</span>
-            </p>
-          </div>
+      <div className={`${card} flex flex-wrap items-center gap-4`}>
+        <Avatar name={patient.name} size="lg" />
+        <div className="min-w-0 flex-1 basis-64">
+          <h1 className="page-title">{patient.name}</h1>
+          <p className="mt-2 flex flex-wrap items-center gap-2">
+            <span className={chip}>{ageFromDob(patient.dob) ?? "?"} y</span>
+            <span className={chip}>{patient.sex ?? "—"}</span>
+            <span className={chip}>MRN {patient.mrn ?? "—"}</span>
+            <span className={chip}><Phone size={13} />{patient.phone ?? "—"}</span>
+            {allergyList.map((a) => (
+              <span key={a.id ?? a.substance} className="badge badge-alert"><AlertTriangle size={12} /> {a.substance}</span>
+            ))}
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <PreVisitBrief patientId={id} patientName={patient.name} />
-          {can(role, "upload") && <Link href={`/patients/${id}/upload`} className="flex items-center gap-1.5 rounded-lg border border-teal-600 px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50">
-            <Upload size={16} /> Upload report
-          </Link>}
-          {can(role, "record_consultation") && <Link href={`/patients/${id}/consult`} className="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-2 text-sm font-medium text-white hover:bg-teal-700">
-            <Mic size={16} /> New consultation
-          </Link>}
-        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {can(role, "record_consultation") && (
+          <Link href={`/patients/${id}/consult`} className="tile"><span className="tile-icon"><Mic size={18} /></span> New consultation</Link>
+        )}
+        {can(role, "upload") && (
+          <Link href={`/patients/${id}/upload`} className="tile"><span className="tile-icon"><Upload size={18} /></span> Upload report</Link>
+        )}
+        {can(role, "ask") && (
+          <a href="#ask" className="tile"><span className="tile-icon"><MessageSquareText size={18} /></span> Ask Medora</a>
+        )}
+        <PreVisitBrief patientId={id} patientName={patient.name} tile />
       </div>
 
       {can(role, "export_fhir") && (
@@ -138,24 +143,26 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
         <CareGaps gaps={gaps} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="min-w-0 space-y-4 lg:col-span-2">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="min-w-0 space-y-6 lg:col-span-2">
           <TrendsCard patientId={id} labs={(labs.data ?? []) as TrendLab[]} />
 
           {can(role, "ask") && <AskMedora patientId={id} />}
 
           <div id="timeline" className={card}>
+            <p className="eyebrow">History</p>
             <h2 className="card-title mb-3">Timeline</h2>
             <Timeline items={items} />
           </div>
         </div>
 
-        <div className="min-w-0 space-y-4">
+        <div className="min-w-0 space-y-6">
           <TasksCard patientId={id} tasks={(tasks.data ?? []) as Task[]} today={today} noteDates={noteDates}
             canConfirm={can(role, "task.confirm")} canDismiss={can(role, "task.dismiss")} canComplete={can(role, "task.complete")} />
 
           <div className={card}>
-            <h2 className="card-title mb-3 flex items-center gap-2"><Pill size={16} className="text-emerald-600" /> Current medications</h2>
+            <p className="eyebrow">Treatment</p>
+            <h2 className="card-title mb-3 flex items-center gap-2"><Pill size={16} className="text-brand-600" /> Current medications</h2>
             {activeMeds.length === 0 ? (
               <p className="text-sm text-slate-500">No active medications.</p>
             ) : (
@@ -172,6 +179,7 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
 
           {can(role, "view_audit") && (
             <div className={card}>
+              <p className="eyebrow">Audit</p>
               <h2 className="card-title mb-3">Access log</h2>
               {accessLog.length === 0 ? (
                 <p className="text-sm text-slate-500">No entries.</p>
@@ -190,7 +198,7 @@ export default async function PatientPage(props: PageProps<"/patients/[id]">) {
                   })}
                 </ul>
               )}
-              <Link href={`/audit?patient=${id}`} className="mt-2 inline-block text-xs text-teal-700 hover:underline">Full audit log →</Link>
+              <Link href={`/audit?patient=${id}`} className="mt-2 inline-block text-xs text-brand-700 hover:underline">Full audit log →</Link>
             </div>
           )}
         </div>

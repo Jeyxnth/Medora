@@ -32,15 +32,15 @@ export default function LoginPage() {
   }
 
   const fill = (e: string) => { setEmail(e); setPassword("demo1234"); };
-  const input = "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100";
-  const chip = "rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 hover:border-teal-400 hover:text-teal-700";
+  const input = "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100";
+  const chip = "rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 hover:border-brand-400 hover:text-brand-700";
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="flex flex-col justify-between gap-8 bg-gradient-to-br from-teal-700 to-teal-900 px-8 py-10 text-white sm:px-12 lg:px-16 lg:py-16">
+      <div className="flex flex-col justify-between gap-8 bg-brand-700 px-8 py-10 text-white sm:px-12 lg:px-16 lg:py-16">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Medora</h1>
-          <p className="mt-2 text-lg text-teal-100">AI drafts. Doctors decide.</p>
+          <p className="mt-2 text-lg text-brand-100">AI drafts. Doctors decide.</p>
         </div>
         <ul className="space-y-5">
           {POINTS.map(({ icon: Icon, title, text }) => (
@@ -48,12 +48,12 @@ export default function LoginPage() {
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15"><Icon size={18} /></span>
               <div>
                 <p className="font-semibold">{title}</p>
-                <p className="text-sm text-teal-100">{text}</p>
+                <p className="text-sm text-brand-100">{text}</p>
               </div>
             </li>
           ))}
         </ul>
-        <p className="hidden text-xs text-teal-200 lg:block">Synthetic demo data only.</p>
+        <p className="hidden text-xs text-brand-100 lg:block">Synthetic demo data only.</p>
       </div>
 
       <div className="flex items-center justify-center bg-slate-50 px-4 py-10">
@@ -65,7 +65,7 @@ export default function LoginPage() {
               <input className={input} type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               <input className={input} type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               {error && <p className="text-sm text-red-600">{error}</p>}
-              <button disabled={loading} className="w-full rounded-lg bg-teal-600 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-60">
+              <button disabled={loading} className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60">
                 {loading ? "Signing in..." : "Sign in"}
               </button>
             </form>

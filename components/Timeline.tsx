@@ -10,7 +10,7 @@ const TYPES: Record<TimelineType, { label: string; icon: typeof Pill; color: str
   lab: { label: "Labs", icon: FlaskConical, color: "bg-violet-100 text-violet-700", dot: "bg-violet-500" },
   medication: { label: "Medications", icon: Pill, color: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
   document: { label: "Documents", icon: FileText, color: "bg-orange-100 text-orange-700", dot: "bg-orange-500" },
-  note: { label: "Notes", icon: NotebookPen, color: "bg-teal-100 text-teal-700", dot: "bg-teal-500" },
+  note: { label: "Notes", icon: NotebookPen, color: "bg-brand-100 text-brand-700", dot: "bg-brand-500" },
 };
 
 function LabTable({ labs }: { labs: NonNullable<TimelineItem["labs"]> }) {
@@ -52,9 +52,9 @@ function Item({ item }: { item: TimelineItem }) {
         <div className="flex flex-wrap items-center gap-2">
           <span className={`flex h-6 w-6 items-center justify-center rounded-md ${color}`}><Icon size={13} /></span>
           <span className="text-sm font-medium text-slate-900">{item.title}</span>
-          {item.draft && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Draft - needs review</span>}
+          {item.draft && <span className="badge badge-draft">Draft - needs review</span>}
           {item.labs && (
-            <button onClick={() => setOpen(!open)} className="ml-auto flex items-center gap-1 text-xs text-teal-700">
+            <button onClick={() => setOpen(!open)} className="ml-auto flex items-center gap-1 text-xs text-brand-700">
               {open ? "Hide" : "Show"} <ChevronDown size={14} className={open ? "rotate-180" : ""} />
             </button>
           )}
@@ -62,7 +62,7 @@ function Item({ item }: { item: TimelineItem }) {
         {item.detail && <p className="mt-1 text-sm text-slate-600">{item.detail}</p>}
         {item.labs && open && <LabTable labs={item.labs} />}
         {item.href && (
-          <Link href={item.href} className="mt-2 inline-block text-xs font-medium text-teal-700 hover:underline">
+          <Link href={item.href} className="mt-2 inline-block text-xs font-medium text-brand-700 hover:underline">
             {item.draft ? "Review draft" : item.type === "note" ? "View note" : "View source document"}
           </Link>
         )}

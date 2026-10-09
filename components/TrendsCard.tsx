@@ -32,16 +32,16 @@ function Chart({ test, labs, patientId }: { test: string; labs: TrendLab[]; pati
         <h3 className="text-sm font-semibold text-slate-900">{test}</h3>
         <span className="text-xs text-slate-500">
           Latest {last.value} {last.unit}
-          {last.document_id && <> · <Link href={`/patients/${patientId}/documents/${last.document_id}`} className="text-teal-700 hover:underline">source</Link></>}
+          {last.document_id && <> · <Link href={`/patients/${patientId}/documents/${last.document_id}`} className="text-brand-700 hover:underline">source</Link></>}
         </span>
       </div>
       <div className="mt-2 h-44">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={points} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
-            <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
-            {ref && <ReferenceArea y1={ref.ref_low ?? lo} y2={ref.ref_high ?? hi} fill="#14b8a6" fillOpacity={0.12} stroke="none" ifOverflow="extendDomain" />}
-            <XAxis dataKey="t" type="number" scale="time" domain={["dataMin", "dataMax"]} tickFormatter={shortDate} tick={{ fontSize: 11, fill: "#64748b" }} padding={{ left: 10, right: 10 }} />
-            <YAxis domain={[lo, hi]} tickFormatter={(v: number) => String(Math.round(v * 10) / 10)} tick={{ fontSize: 11, fill: "#64748b" }} width={44} />
+            <CartesianGrid stroke="#efe4da" strokeDasharray="3 3" />
+            {ref && <ReferenceArea y1={ref.ref_low ?? lo} y2={ref.ref_high ?? hi} fill="#a9552f" fillOpacity={0.12} stroke="none" ifOverflow="extendDomain" />}
+            <XAxis dataKey="t" type="number" scale="time" domain={["dataMin", "dataMax"]} tickFormatter={shortDate} tick={{ fontSize: 11, fill: "#6b5a52" }} padding={{ left: 10, right: 10 }} />
+            <YAxis domain={[lo, hi]} tickFormatter={(v: number) => String(Math.round(v * 10) / 10)} tick={{ fontSize: 11, fill: "#6b5a52" }} width={44} />
             <Tooltip
               trigger="click"
               wrapperStyle={{ pointerEvents: "auto", zIndex: 10 }}
@@ -52,15 +52,15 @@ function Chart({ test, labs, patientId }: { test: string; labs: TrendLab[]; pati
                   <div className="rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-700 shadow">
                     <div className="font-medium text-slate-900">{day(p.t)}</div>
                     <div className={p.bad ? "text-red-600" : ""}>{p.value} {p.unit}{p.bad && " (out of range)"}</div>
-                    {p.docId && <Link href={`/patients/${patientId}/documents/${p.docId}`} className="text-teal-700 hover:underline">source document</Link>}
+                    {p.docId && <Link href={`/patients/${patientId}/documents/${p.docId}`} className="text-brand-700 hover:underline">source document</Link>}
                   </div>
                 );
               }}
             />
             <Line
-              type="monotone" dataKey="value" stroke="#0f766e" strokeWidth={2} isAnimationActive={false}
+              type="monotone" dataKey="value" stroke="#8f4524" strokeWidth={2} isAnimationActive={false}
               dot={(d: { cx?: number; cy?: number; payload?: Point; index?: number }) => (
-                <circle key={d.index} cx={d.cx} cy={d.cy} r={4} fill={d.payload?.bad ? "#dc2626" : "#0f766e"} stroke="#fff" strokeWidth={1.5} />
+                <circle key={d.index} cx={d.cx} cy={d.cy} r={4} fill={d.payload?.bad ? "#b3261e" : "#8f4524"} stroke="#fff" strokeWidth={1.5} />
               )}
               activeDot={{ r: 6 }}
             />
@@ -85,6 +85,7 @@ export default function TrendsCard({ patientId, labs }: { patientId: string; lab
 
   return (
     <div className="card p-5">
+      <p className="eyebrow">Labs</p>
       <h2 className="card-title mb-3">Trends</h2>
       {tests.length === 0 ? (
         <p className="rounded-lg bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">Trends appear once a test has two or more results.</p>
@@ -102,7 +103,7 @@ export default function TrendsCard({ patientId, labs }: { patientId: string; lab
           <div className="mb-3 flex flex-wrap gap-2">
             {tests.map((t) => (
               <button key={t} onClick={() => toggle(t)}
-                className={`rounded-full border px-3 py-1 text-xs font-medium ${selected.includes(t) ? "border-transparent bg-teal-600 text-white" : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"}`}>
+                className={`rounded-full border px-3 py-1 text-xs font-medium ${selected.includes(t) ? "border-transparent bg-brand-600 text-white" : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"}`}>
                 {t}
               </button>
             ))}

@@ -22,7 +22,7 @@ function AutoText({ value, disabled, onChange }: { value: string; disabled: bool
   }, [value]);
   return (
     <textarea ref={ref} rows={1} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}
-      className="min-w-0 flex-1 resize-none overflow-hidden rounded border border-transparent bg-transparent px-1.5 py-1 text-sm leading-snug text-slate-900 hover:border-slate-200 focus:border-teal-500 focus:bg-white disabled:bg-transparent" />
+      className="min-w-0 flex-1 resize-none overflow-hidden rounded border border-transparent bg-transparent px-1.5 py-1 text-sm leading-snug text-slate-900 hover:border-slate-200 focus:border-brand-500 focus:bg-white disabled:bg-transparent" />
   );
 }
 
@@ -87,7 +87,7 @@ export default function NoteReview(p: {
   const chips = (sources: number[]) =>
     sources.map((n) => (
       <button key={n} type="button" onClick={() => jump(n)} onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover(null)}
-        className={`rounded px-1.5 py-0.5 text-xs font-medium ${lit === n ? "bg-teal-600 text-white" : "bg-teal-50 text-teal-700 hover:bg-teal-100"}`}>
+        className={`rounded px-1.5 py-0.5 text-xs font-medium ${lit === n ? "bg-brand-600 text-white" : "bg-brand-50 text-brand-700 hover:bg-brand-100"}`}>
         {n}
       </button>
     ));
@@ -104,8 +104,8 @@ export default function NoteReview(p: {
         <div ref={transcript} className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1 text-sm leading-snug">
           {p.initial.segments.map((s) => (
             <div key={s.id} id={`seg-${s.id}`}
-              className={`rounded-md border-l-4 px-2.5 py-1 transition-colors ${s.speaker === "doctor" ? "border-teal-500" : s.speaker === "patient" ? "border-slate-400" : "border-slate-200"} ${lit === s.id ? "bg-amber-100" : "bg-slate-50"}`}>
-              <span className={`mr-1.5 text-xs font-semibold uppercase ${s.speaker === "doctor" ? "text-teal-700" : "text-slate-500"}`}>
+              className={`rounded-md border-l-4 px-2.5 py-1 transition-colors ${s.speaker === "doctor" ? "border-brand-500" : s.speaker === "patient" ? "border-slate-400" : "border-slate-200"} ${lit === s.id ? "bg-amber-100" : "bg-slate-50"}`}>
+              <span className={`mr-1.5 text-xs font-semibold uppercase ${s.speaker === "doctor" ? "text-brand-700" : "text-slate-500"}`}>
                 {s.speaker === "doctor" ? "Doctor" : s.speaker === "patient" ? "Patient" : "Other"} <span className="font-normal text-slate-400">[{s.id}]</span>
               </span>
               <span className="text-slate-800">{s.text}</span>
@@ -119,9 +119,9 @@ export default function NoteReview(p: {
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">SOAP note</span>
             {ro ? (
-              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Approved</span>
+              <span className="badge badge-approved">Approved</span>
             ) : (
-              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Draft - needs review</span>
+              <span className="badge badge-draft">Draft - needs review</span>
             )}
           </div>
 
@@ -136,7 +136,7 @@ export default function NoteReview(p: {
                 <span className="rounded-full bg-slate-100 px-1.5 text-xs font-medium text-slate-600">{soap[key].length}</span>
                 {!ro && (
                   <button type="button" onClick={() => setSoap({ ...soap, [key]: [...soap[key], { text: "", sources: [] }] })}
-                    className="ml-auto flex items-center gap-0.5 text-xs font-medium text-teal-700 hover:underline"><Plus size={12} /> Add statement</button>
+                    className="ml-auto flex items-center gap-0.5 text-xs font-medium text-brand-700 hover:underline"><Plus size={12} /> Add statement</button>
                 )}
               </div>
               {!collapsed.has(key) && (
@@ -213,7 +213,7 @@ export default function NoteReview(p: {
             {msg && <p className="text-xs text-slate-600">{msg}</p>}
             <div className="flex flex-wrap gap-2">
               <button disabled={!p.isDoctor || pending} onClick={() => run(() => approveNote(p.noteId, content(), [...ticked]))}
-                className="rounded-lg bg-teal-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40">
+                className="rounded-lg bg-brand-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-40">
                 Approve and save
               </button>
               <button disabled={pending} onClick={() => run(() => saveNoteDraft(p.noteId, content()), "Draft saved")}

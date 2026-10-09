@@ -24,7 +24,7 @@ export default async function NotePage(props: PageProps<"/patients/[id]/notes/[n
 
   return (
     <div className="space-y-3">
-      <Link href={`/patients/${id}`} className="text-sm text-teal-700 hover:underline">← Back to {patient?.name ?? "patient"}</Link>
+      <Link href={`/patients/${id}`} className="text-sm text-brand-700 hover:underline">← Back to {patient?.name ?? "patient"}</Link>
       {typeof notice === "string" && (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{notice}</p>
       )}

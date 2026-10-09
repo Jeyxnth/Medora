@@ -80,8 +80,8 @@ export default function UploadForm({ patientId }: { patientId: string }) {
     return (
       <ol className="space-y-2 py-2">
         {STEPS.map((label, i) => (
-          <li key={label} className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm ${i < step ? "border-teal-200 bg-teal-50 text-teal-800" : i === step ? "border-teal-400 bg-white font-medium text-slate-900 shadow-sm" : "border-slate-200 text-slate-400"}`}>
-            {i < step ? <Check size={18} className="text-teal-600" /> : i === step ? <Loader2 size={18} className="animate-spin text-teal-600" /> : <span className="h-[18px] w-[18px] rounded-full border border-slate-300" />}
+          <li key={label} className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm ${i < step ? "border-brand-200 bg-brand-50 text-brand-800" : i === step ? "border-brand-400 bg-white font-medium text-slate-900 shadow-sm" : "border-slate-200 text-slate-400"}`}>
+            {i < step ? <Check size={18} className="text-brand-600" /> : i === step ? <Loader2 size={18} className="animate-spin text-brand-600" /> : <span className="h-[18px] w-[18px] rounded-full border border-slate-300" />}
             {label}
           </li>
         ))}
@@ -96,7 +96,7 @@ export default function UploadForm({ patientId }: { patientId: string }) {
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
         onDrop={(e) => { e.preventDefault(); setDrag(false); pick(e.dataTransfer.files[0]); }}
-        className={`cursor-pointer rounded-xl border-2 border-dashed p-6 text-center ${drag ? "border-teal-500 bg-teal-50" : "border-slate-300 hover:bg-slate-50"}`}
+        className={`cursor-pointer rounded-xl border-2 border-dashed p-6 text-center ${drag ? "border-brand-500 bg-brand-50" : "border-slate-300 hover:bg-slate-50"}`}
       >
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -122,7 +122,7 @@ export default function UploadForm({ patientId }: { patientId: string }) {
         </div>
       )}
 
-      <button onClick={submit} disabled={!file} className="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40">
+      <button onClick={submit} disabled={!file} className="w-full rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-40">
         {error && file ? "Retry" : "Upload and read"}
       </button>
     </div>

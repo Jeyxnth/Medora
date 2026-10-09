@@ -1,13 +1,73 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+   Warm theme. Everything below is the one place that sets the palette:
+   - brand-*   terracotta primary (600 = #A9552F, 700 = hover #8F4524, 50 = soft tint #FDEFE6)
+   - slate-*   warm neutrals (50 = page cream, 200 = border, 500 = secondary text, 900 = text)
+   - emerald / amber / red  approved (green), draft/review (amber), safety/alert (red)
+   Contrast (WCAG AA, checked): text #2B2220 on cream 14.5, secondary #6B5A52 on white 6.5,
+   white on primary 5.2, approved 5.1, draft 5.4, alert 5.6, muted text #7A685F on cream 4.9.
+   --------------------------------------------------------------------------- */
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #fbf6f1;
+  --foreground: #2b2220;
+  --radius-card: 1rem;
+  --shadow-card: 0 1px 2px rgba(60, 40, 30, 0.06), 0 2px 8px rgba(60, 40, 30, 0.04);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+@theme {
+  --color-brand-50: #fdefe6;
+  --color-brand-100: #fadfcf;
+  --color-brand-200: #f2c4ab;
+  --color-brand-300: #e8a27f;
+  --color-brand-400: #d07c55;
+  --color-brand-500: #bc653d;
+  --color-brand-600: #a9552f;
+  --color-brand-700: #8f4524;
+  --color-brand-800: #733819;
+  --color-brand-900: #582b13;
+
+  --color-slate-50: #fbf6f1;
+  --color-slate-100: #f5ece4;
+  --color-slate-200: #efe4da;
+  --color-slate-300: #9a8a80;
+  --color-slate-400: #7a685f;
+  --color-slate-500: #6b5a52;
+  --color-slate-600: #5a4a43;
+  --color-slate-700: #4a3c36;
+  --color-slate-800: #3a2e2a;
+  --color-slate-900: #2b2220;
+
+  /* approved */
+  --color-emerald-50: #f1f6ea;
+  --color-emerald-100: #e8f0df;
+  --color-emerald-200: #cfe0bf;
+  --color-emerald-500: #6e8f58;
+  --color-emerald-600: #5b7a48;
+  --color-emerald-700: #4f6b3f;
+  --color-emerald-800: #4f6b3f;
+  --color-emerald-900: #3e5531;
+
+  /* draft / review */
+  --color-amber-50: #fff9ea;
+  --color-amber-100: #fff3d6;
+  --color-amber-200: #f5e1a8;
+  --color-amber-500: #c98a12;
+  --color-amber-600: #a87000;
+  --color-amber-700: #8a5a00;
+  --color-amber-800: #8a5a00;
+  --color-amber-900: #6b4500;
+
+  /* safety / alert */
+  --color-red-50: #fef1ef;
+  --color-red-100: #fde8e6;
+  --color-red-200: #f5c6c1;
+  --color-red-500: #d2443b;
+  --color-red-600: #c0302a;
+  --color-red-700: #b3261e;
+  --color-red-800: #b3261e;
+  --color-red-900: #8c1d18;
+
   --font-sans: var(--font-inter), system-ui, sans-serif;
 }
 
@@ -18,18 +78,88 @@ body {
   font-feature-settings: "cv05";
 }
 
-/* Shared design tokens */
+/* Cards: one radius, one soft shadow */
 .card {
   background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 1rem;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  border: 1px solid var(--color-slate-200);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 .card-title {
-  font-size: 1rem;
+  font-size: 1.0625rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--color-slate-900);
 }
+/* small muted label above a section heading */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-slate-500);
+}
+.page-title {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-slate-900);
+}
+
+/* Status badges: the same look for notes, documents and tasks */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.badge-draft { background: #fff3d6; color: #8a5a00; }
+.badge-approved { background: #e8f0df; color: #4f6b3f; }
+.badge-alert { background: #fde8e6; color: #b3261e; }
+
+/* Alert cards (safety, care gaps, flagged fields): coloured left border */
+.alert-card {
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
+  border-left-width: 4px;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+}
+.alert-critical { background: #fde8e6; border-color: #f5c6c1; border-left-color: #b3261e; color: #8c1d18; }
+.alert-warning { background: #fff3d6; border-color: #f5e1a8; border-left-color: #c98a12; color: #6b4500; }
+.alert-info { background: #fdefe6; border-color: #f2c4ab; border-left-color: #a9552f; color: #582b13; }
+
+/* Quick-action tiles */
+.tile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-slate-900);
+  background: #fff;
+  border: 1px solid var(--color-slate-200);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+.tile:hover { border-color: var(--color-brand-300); background: var(--color-brand-50); }
+.tile-icon {
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--color-brand-50);
+  color: var(--color-brand-700);
+}
+.tile:hover .tile-icon { background: #fff; }
 
 @media print {
   body * { visibility: hidden; }
@@ -39,14 +169,14 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid #14b8a6;
+  outline: 2px solid var(--color-brand-600);
   outline-offset: 2px;
 }
 button:not(:disabled), a { transition: background-color 0.15s, border-color 0.15s, color 0.15s; }
 button:not(:disabled) { cursor: pointer; }
 
 @keyframes focus-flash {
-  0%, 70% { box-shadow: 0 0 0 3px #14b8a6; background-color: #f0fdfa; }
+  0%, 70% { box-shadow: 0 0 0 3px var(--color-brand-600); background-color: var(--color-brand-50); }
   100% { box-shadow: 0 0 0 3px transparent; }
 }
 .focus-flash { animation: focus-flash 3s ease-out; border-radius: 0.75rem; }
