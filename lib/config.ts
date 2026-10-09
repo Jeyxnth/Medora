@@ -15,6 +15,15 @@ export const LLM_CALL_TIMEOUT_MS = num(process.env.LLM_CALL_TIMEOUT_MS, 15_000);
 export const LLM_TOTAL_BUDGET_MS = num(process.env.LLM_TOTAL_BUDGET_MS, 50_000);
 
 export const LLM_PROVIDERS = list(process.env.LLM_PROVIDERS || "openrouter,deepseek");
+// Image calls only: API providers first, then the local Ollama model if every API route failed.
+export const LLM_VISION_PROVIDERS = list(process.env.LLM_VISION_PROVIDERS || "openrouter,ollama");
+
+// Ollama (local, localhost only: Vercel cannot reach it). Skipped when no model is set.
+// It has its own time limit, separate from LLM_TOTAL_BUDGET_MS, which starts when Ollama is reached.
+export const OLLAMA_BASE_URL = (process.env.OLLAMA_BASE_URL || "http://localhost:11434/v1").replace(/\/+$/, "");
+export const OLLAMA_VISION_MODEL = process.env.OLLAMA_VISION_MODEL || "";
+export const OLLAMA_MODEL = process.env.OLLAMA_MODEL || ""; // text, only used if "ollama" is in LLM_PROVIDERS
+export const OLLAMA_CALL_TIMEOUT_MS = num(process.env.OLLAMA_CALL_TIMEOUT_MS, 120_000);
 
 // OpenRouter: free models by default (see https://openrouter.ai/models). Free models are rate limited and sometimes busy.
 export const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "nvidia/nemotron-3-super-120b-a12b:free"; // text

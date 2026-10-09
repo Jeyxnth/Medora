@@ -49,6 +49,7 @@ There is no vector database. For each question, one patient's approved records a
 | Database, auth, storage | Supabase (Postgres with row-level security, Auth, Storage) |
 | Extraction, notes, Q&A | OpenRouter (`OPENROUTER_MODEL` for text, `OPENROUTER_VISION_MODEL` for images, `OPENROUTER_FALLBACK_MODELS`), then DeepSeek for text (`DEEPSEEK_MODEL`). Order is set by `LLM_PROVIDERS` (default `openrouter,deepseek`); Gemini is optional and off unless you add `gemini` |
 | Transcription | Groq Whisper (`GROQ_WHISPER_MODEL`, default `whisper-large-v3-turbo`) |
+| Local fallback for images | Ollama (`OLLAMA_VISION_MODEL`, for example `qwen2.5vl:7b`), only after every API route failed. Image order is `LLM_VISION_PROVIDERS` (default `openrouter,ollama`). It is skipped when no model is set or Ollama is not running. **Localhost only**: Vercel cannot reach a local Ollama, so on Vercel it is skipped. It has its own limit (`OLLAMA_CALL_TIMEOUT_MS`, default 120 s) that starts when Ollama is reached, and is never retried. Text calls do not use it unless you add `ollama` to `LLM_PROVIDERS` and set `OLLAMA_MODEL` |
 | Optional extra providers | `gemini` (keys and models via `GEMINI_*`, see `npm run check:gemini-models`) and `groq` chat (`GROQ_CHAT_MODEL`, see `npm run check:models`). `npm run check:providers` makes one small text call to each configured provider |
 | Hosting | Vercel |
 

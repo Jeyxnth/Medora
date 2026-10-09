@@ -1,6 +1,6 @@
 import Groq from "groq-sdk";
 import {
-  DEEPSEEK_MODEL, GEMINI_FALLBACK_MODELS, GEMINI_MODEL, GEMINI_VISION_MODEL, GROQ_CHAT_MODEL, LLM_PROVIDERS,
+  DEEPSEEK_MODEL, GEMINI_FALLBACK_MODELS, GEMINI_MODEL, GEMINI_VISION_MODEL, GROQ_CHAT_MODEL, LLM_PROVIDERS, LLM_VISION_PROVIDERS, OLLAMA_BASE_URL, OLLAMA_CALL_TIMEOUT_MS, OLLAMA_MODEL, OLLAMA_VISION_MODEL,
   LLM_CALL_TIMEOUT_MS, LLM_RETRY_ATTEMPTS, LLM_RETRY_DELAY_MS, LLM_ROUTE_COOLDOWN_MS, LLM_TOTAL_BUDGET_MS, OPENROUTER_FALLBACK_MODELS, OPENROUTER_MODEL, OPENROUTER_VISION_FALLBACK_MODELS, OPENROUTER_VISION_MODEL,
 } from "./config";
 import { AiError, withGemini } from "./gemini-client";
@@ -57,23 +57,33 @@ function routesFor(a: Args): Route[] {
   const openai = (provider: string, url: string, key: string, model: string, headers?: Record<string, string>) =>
     routes.push({ id: `${provider}:${model}`, run: (timeoutMs) => chatJSON({ url, key, model, system: a.system, prompt: a.prompt, images: a.images, schema: a.schema, headers, timeoutMs }) });
 
-  for (const p of LLM_PROVIDERS) {
+  for (const p of vision ? LLM_VISION_PROVIDERS : LLM_PROVIDERS) {
     if (p === "openrouter" && process.env.OPENROUTER_API_KEY) {
       const models = vision ? [OPENROUTER_VISION_MODEL, ...OPENROUTER_VISION_FALLBACK_MODELS] : [OPENROUTER_MODEL, ...OPENROUTER_FALLBACK_MODELS];
       for (const m of new Set(models.filter(Boolean))) openai("openrouter", OPENROUTER_URL, process.env.OPENROUTER_API_KEY, m, { "X-Title": "Medora" });
     } else if (p === "deepseek" && process.env.DEEPSEEK_API_KEY && !vision) { // text only
       openai("deepseek", DEEPSEEK_URL, process.env.DEEPSEEK_API_KEY, DEEPSEEK_MODEL);
+    } else if (p === "ollama") {
+      const model = vision ? OLLAMA_VISION_MODEL : OLLAMA_MODEL;
+      if (model) {
+        routes.push({
+          id: `ollama:${model}`,
+          local: { timeoutMs: OLLAMA_CALL_TIMEOUT_MS },
+          run: (timeoutMs) => chatJSON({ url: `${OLLAMA_BASE_URL}/chat/completions`, key: "ollama", model, system: a.system, prompt: a.prompt, images: a.images, schema: a.schema, timeoutMs }),
+        });
+      }
     } else if (p === "gemini") {
       routes.push({ id: "gemini", run: () => callGemini(a) });
     } else if (p === "groq" && process.env.GROQ_API_KEY && !vision) {
       routes.push({ id: `groq:${GROQ_CHAT_MODEL}`, run: () => callGroq(a) });
     }
   }
-  return routes;
+  return [...routes.filter((r) => !r.local), ...routes.filter((r) => r.local)]; // local Ollama only after every API route
 }
 
 // `run` gets the time it may take; routes that cannot enforce it themselves (Gemini, Groq) are cut off by runRoutes.
-export type Route = { id: string; run: (timeoutMs: number) => Promise<unknown> };
+// A `local` route (Ollama) has its own time limit that starts when it is reached, outside the request budget, and is never retried.
+export type Route = { id: string; local?: { timeoutMs: number }; run: (timeoutMs: number) => Promise<unknown> };
 
 const cooling = new Map<string, number>(); // route id -> time it may be used again (in memory only)
 
@@ -105,8 +115,9 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 
 // Tries each route in order. A route that fails with a retryable error is retried (default once, after 3 s, or after
 // its Retry-After if that is 1-5 s; a longer Retry-After skips the retry). After that the route rests for the cooldown
-// (default 10 s) and the next route is tried. Each call is cut off after the call timeout, and the whole request
-// (calls plus retry waits) has a time budget: once it is spent no further route is tried. No whole-list retry: if every
+// (default 10 s) and the next route is tried. Each call is cut off after the call timeout, and the API routes together
+// (calls plus retry waits) have a time budget: once it is spent no further API route is tried. Local routes (Ollama)
+// are not part of that budget: each gets its own timeout when reached, with no retry. No whole-list retry: if every
 // route fails, throws a friendly AiError.
 export async function runRoutes<T>(all: Route[], deps: Deps = {}): Promise<T> {
   const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
@@ -124,15 +135,20 @@ export async function runRoutes<T>(all: Route[], deps: Deps = {}): Promise<T> {
   for (const r of ready.length ? ready : all) { // everything resting: try each once rather than fail without a call
     for (let attempt = 0; ; attempt++) {
       const left = deadline - now();
-      if (left <= 0) {
-        console.warn("[ai] time budget spent, giving up");
-        throw new AiError("AI is busy, try again");
+      if (!r.local && left <= 0) {
+        console.warn(`[ai] time budget spent, skipping ${r.id}`);
+        break;
       }
       try {
-        const ms = Math.min(callTimeout, left);
+        const ms = r.local ? r.local.timeoutMs : Math.min(callTimeout, left);
         return (await withTimeout(r.run(ms), ms)) as T;
       } catch (e) {
         const status = statusOf(e);
+        if (r.local) { // Ollama: never retried
+          rest.set(r.id, now() + cooldown);
+          console.warn(status === "network" ? `[ai] ${r.id} is not running, skipped` : `[ai] ${r.id} failed (${status}), no retry`);
+          break;
+        }
         const after = e instanceof RouteError ? e.retryAfterMs : undefined;
         const wait = after !== undefined && after >= 1000 ? after : delay;
         const canRetry =
