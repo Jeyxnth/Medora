@@ -6,6 +6,26 @@ import { currentRole } from "@/lib/roles";
 import { ActionBadge, RoleBadge, formatTime } from "@/components/AuditBadge";
 
 const ACTIONS = ["view", "ask", "edit", "update", "extract", "create_note", "approve", "discard", "task.draft_created", "task.confirm", "task.dismiss", "task.complete", "brief.generate"];
+type Details = { confirmed_by?: string; changes?: { item: string; field: string; from: string | null; to: string | null }[]; confirmed_as_read?: string[]; added?: string[]; removed?: string[]; safety_alerts?: string[] };
+
+// What the doctor changed from the AI reading when confirming a prescription.
+function ReviewDetails({ d }: { d: Details }) {
+  const lines = [
+    ...(d.changes ?? []).map((c) => `${c.item} · ${c.field}: "${c.from ?? ""}" → "${c.to ?? ""}"`),
+    ...(d.confirmed_as_read ?? []).map((c) => `Confirmed as read: ${c}`),
+    ...(d.added ?? []).map((c) => `Added: ${c}`),
+    ...(d.removed ?? []).map((c) => `Removed: ${c}`),
+    ...(d.safety_alerts ?? []).map((c) => `Safety alert: ${c}`),
+  ];
+  return (
+    <details className="mt-1 text-xs text-slate-700">
+      <summary className="cursor-pointer text-teal-700">Review details ({d.changes?.length ?? 0} changes)</summary>
+      <p className="mt-1">Confirmed by {d.confirmed_by ?? "unknown"}</p>
+      <ul className="list-disc pl-4">{lines.map((l, i) => <li key={i}>{l}</li>)}</ul>
+    </details>
+  );
+}
+
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
 
 export default async function AuditPage(props: PageProps<"/audit">) {
@@ -71,7 +91,7 @@ export default async function AuditPage(props: PageProps<"/audit">) {
                   <td className="whitespace-nowrap px-4 py-2 text-slate-600">{formatTime(r.created_at)}</td>
                   <td className="px-4 py-2">{u ? <span className="flex items-center gap-2">{u.full_name} <RoleBadge role={u.role} /></span> : <span className="text-slate-400">unknown</span>}</td>
                   <td className="px-4 py-2"><ActionBadge action={r.action} /></td>
-                  <td className="px-4 py-2">{r.entity_type}{r.entity_id && <span className="ml-1 font-mono text-xs text-slate-400">{String(r.entity_id).slice(0, 8)}</span>}</td>
+                  <td className="px-4 py-2">{r.entity_type}{r.entity_id && <span className="ml-1 font-mono text-xs text-slate-400">{String(r.entity_id).slice(0, 8)}</span>}{r.details && <ReviewDetails d={r.details} />}</td>
                   <td className="px-4 py-2">{r.patient_id ? <Link href={`/patients/${r.patient_id}`} className="text-teal-700 hover:underline">{name ?? "Patient"}</Link> : <span className="text-slate-400">—</span>}</td>
                 </tr>
               );

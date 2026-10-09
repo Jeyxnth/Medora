@@ -2,7 +2,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
-import { currentUser } from "@/lib/roles";
+import { currentProfile, currentUser } from "@/lib/roles";
+import { isIllegible } from "@/lib/extract";
+import { diffReading } from "@/lib/review-diff";
+import { loadSafetyContext } from "@/lib/safety-context";
+import { checkSafety } from "@/lib/safety";
 import { can } from "@/lib/permissions";
 import { canonicalName, computeFlag } from "@/lib/validate";
 import type { Extraction } from "@/lib/extract";
@@ -34,6 +38,28 @@ export async function approveDocument(docId: string, data: Extraction): Promise<
   if (!can(role, "approve")) return { error: "Only a doctor can approve." };
   if (doc.status !== "draft") return { error: "Document is already approved" };
   if (!data.document_date) return { error: "Document date is required." };
+
+  // Handwritten prescriptions: nothing illegible may be saved, and the audit entry records what changed from the AI's reading.
+  let details: Record<string, unknown> | undefined;
+  if (doc.doc_type === "prescription") {
+    const unreadable = data.medications.some((m) => [m.drug_name, m.dose, m.frequency, m.duration].some(isIllegible)) || isIllegible(data.prescriber);
+    if (unreadable) return { error: "Some fields are still marked illegible. Enter the correct value or remove the row." };
+
+    const original = (doc.extracted_json as Extraction | null)?.ai_original ?? data.ai_original;
+    data.ai_original = original;
+    const ctx = await loadSafetyContext(supabase, doc.patient_id);
+    const alerts = checkSafety({
+      patientId: doc.patient_id, allergies: ctx.allergies, labs: ctx.labs,
+      activeMeds: [...ctx.activeMeds, ...data.medications.map((m) => ({ drug_name: m.drug_name, dose: m.dose, frequency: m.frequency }))],
+    }).filter((a) => a.medIndexes.some((i) => i >= ctx.activeMeds.length));
+    const profile = await currentProfile(supabase);
+    details = {
+      confirmed_by: profile?.full_name ?? null,
+      ...diffReading(original, data),
+      safety_alerts: alerts.map((a) => `${a.severity}: ${a.title}`),
+    };
+    data.review = { ...details, confirmed_at: new Date().toISOString() };
+  }
 
   if (doc.doc_type === "lab_report") {
     const rows = data.lab_results
@@ -73,7 +99,7 @@ export async function approveDocument(docId: string, data: Extraction): Promise<
 
   const { error } = await supabase.from("documents").update({ status: "approved", extracted_json: data }).eq("id", docId);
   if (error) return { error: error.message };
-  await logAudit({ action: "approve", entityType: "document", entityId: docId, patientId: doc.patient_id });
+  await logAudit({ action: "approve", entityType: "document", entityId: docId, patientId: doc.patient_id, details });
   redirect(`/patients/${doc.patient_id}`);
 }
 

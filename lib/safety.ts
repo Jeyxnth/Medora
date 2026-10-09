@@ -144,6 +144,12 @@ const INTERACTIONS: [string, string, Sev, string][] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Every drug name the app knows (brands, generics, class members), for "Did you mean" suggestions.
+export function knownDrugNames(): string[] {
+  const generics = Object.values(BRANDS).flatMap((v) => v.split("+"));
+  return [...new Set([...Object.keys(BRANDS), ...generics, ...Object.values(CLASSES).flatMap((c) => c.members)])];
+}
+
 export type Allergy = { substance: string | null; reaction?: string | null };
 export type Med = { drug_name: string; dose?: string | null; frequency?: string | null };
 export type SafetyLab = { test_name: string; value: number; unit?: string | null; collected_date: string | null; document_id?: string | null };

@@ -1,4 +1,4 @@
-import type { Extraction, LabResult, Medication } from "./extract";
+import { isIllegible, type Extraction, type LabResult, type MedField, type Medication } from "./extract";
 
 type Spec = { name: string; unit: string; min: number; max: number; aliases: string[] };
 
@@ -43,7 +43,7 @@ export function computeFlag(value: number | null, lo: number | null, hi: number 
 export type Flag = "H" | "L" | "N" | null;
 export type Status = "ok" | "check";
 export type ValidatedLab = LabResult & { canonical_name: string | null; flag: Flag; issues: string[]; status: Status };
-export type ValidatedMed = Medication & { issues: string[]; status: Status };
+export type ValidatedMed = Medication & { issues: string[]; status: Status; flags: MedField[] };
 export type ValidatedExtraction = Omit<Extraction, "lab_results" | "medications"> & {
   lab_results: ValidatedLab[];
   medications: ValidatedMed[];
@@ -76,12 +76,23 @@ export function validateLab(r: LabResult): ValidatedLab {
   return { ...r, canonical_name: spec?.name ?? null, flag, issues, status: status(issues) };
 }
 
+export const MED_FIELDS: MedField[] = ["drug_name", "dose", "frequency", "duration"];
+
+// Fields the doctor must edit or confirm: AI confidence is low (or unknown and the row is low), or the AI wrote "illegible".
+// Older extractions have no field_conf, so the row confidence is used for every field.
+export function medFlags(m: Medication): MedField[] {
+  return MED_FIELDS.filter((f) => {
+    const v = m[f];
+    return isIllegible(v) || (!!v?.trim() && (m.field_conf?.[f] ?? m.confidence) === "low");
+  });
+}
+
 export function validateMed(m: Medication): ValidatedMed {
   const issues: string[] = [];
   if (!m.dose?.trim()) issues.push("dose missing");
   if (!m.frequency?.trim()) issues.push("frequency missing");
-  if (m.confidence === "low") issues.push("low confidence");
-  return { ...m, issues, status: status(issues) };
+  const flags = medFlags(m);
+  return { ...m, issues, flags, status: status([...issues, ...flags]) };
 }
 
 export function validateExtraction(x: Extraction): ValidatedExtraction {
