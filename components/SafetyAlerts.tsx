@@ -3,8 +3,8 @@ import { AlertOctagon, AlertTriangle, ShieldCheck } from "lucide-react";
 import type { Alert } from "@/lib/safety";
 
 const STYLE = {
-  critical: { box: "alert-card alert-critical", title: "text-red-900", text: "text-red-900", icon: AlertOctagon, iconColor: "text-red-600", tag: "Critical" },
-  warning: { box: "alert-card alert-warning", title: "text-amber-900", text: "text-amber-900", icon: AlertTriangle, iconColor: "text-amber-600", tag: "Warning" },
+  critical: { box: "border-red-500 bg-red-50", title: "text-red-900", text: "text-red-900", icon: AlertOctagon, iconColor: "text-red-600", tag: "Critical" },
+  warning: { box: "border-amber-500 bg-amber-50", title: "text-amber-900", text: "text-amber-900", icon: AlertTriangle, iconColor: "text-amber-600", tag: "Warning" },
 };
 
 export default function SafetyAlerts({ alerts, title = "Safety alerts", emptyText = "No safety alerts found" }: {
@@ -12,7 +12,7 @@ export default function SafetyAlerts({ alerts, title = "Safety alerts", emptyTex
 }) {
   return (
     <div className="space-y-3">
-      {title && <><p className="eyebrow">Safety</p><h2 className="card-title">{title}</h2></>}
+      {title && <h2 className="card-title">{title}</h2>}
       {alerts.length === 0 ? (
         <p className="flex items-center gap-1.5 text-sm text-emerald-700"><ShieldCheck size={16} /> {emptyText}</p>
       ) : (
@@ -20,7 +20,7 @@ export default function SafetyAlerts({ alerts, title = "Safety alerts", emptyTex
           const s = STYLE[a.severity];
           const Icon = s.icon;
           return (
-            <div key={a.key} className={`flex gap-3 ${s.box}`}>
+            <div key={a.key} className={`flex gap-3 rounded-xl border border-l-4 px-4 py-3 text-sm ${s.box}`}>
               <Icon size={20} className={`mt-0.5 shrink-0 ${s.iconColor}`} />
               <div className="min-w-0 flex-1">
                 <p className={`flex flex-wrap items-center gap-2 font-bold ${s.title}`}>{a.title}

@@ -132,7 +132,7 @@ export default function ReviewForm(p: {
       setMsg(r?.error ?? done ?? null);
     });
 
-  const rowCls = (bad: boolean) => `rounded-lg border p-2 ${bad ? "border-amber-200 border-l-4 border-l-amber-500 bg-amber-50" : "border-slate-200"}`;
+  const rowCls = (bad: boolean) => `rounded-lg border p-2 ${bad ? "border-amber-300 bg-amber-50" : "border-slate-200"}`;
   const verify = (issues: string[], ok: boolean, set: (v: boolean) => void) =>
     issues.length > 0 && !ro && (
       <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-amber-800">
@@ -166,9 +166,9 @@ export default function ReviewForm(p: {
             {isLab ? "Lab report" : p.docType === "prescription" ? "Prescription" : "Other document"}
           </span>
           {ro ? (
-            <span className="badge badge-approved">Approved</span>
+            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Approved</span>
           ) : (
-            <span className="badge badge-draft">Draft - needs review</span>
+            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Draft - needs review</span>
           )}
         </div>
 
@@ -191,7 +191,7 @@ export default function ReviewForm(p: {
         )}
 
         {p.nameMismatch && !ro && (
-          <div className="alert-card alert-critical">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
             <p className="flex items-center gap-1.5 font-medium"><AlertTriangle size={16} /> Name on document does not match this patient</p>
             <p className="mt-1 text-xs">Document: {p.initial.patient_name ?? "(none found)"} · Patient: {p.patientName}</p>
             <label className="mt-2 flex items-center gap-2 text-xs font-medium">
@@ -223,7 +223,7 @@ export default function ReviewForm(p: {
               );
             })}
             {!ro && (
-              <button onClick={() => setLabs([...labs, { key: newKey(), test_name: "", value: "", value_text: "", unit: "", ref_low: "", ref_high: "", printed_flag: null, confidence: "high", ok: false }])} className="flex items-center gap-1 text-sm text-brand-700">
+              <button onClick={() => setLabs([...labs, { key: newKey(), test_name: "", value: "", value_text: "", unit: "", ref_low: "", ref_high: "", printed_flag: null, confidence: "high", ok: false }])} className="flex items-center gap-1 text-sm text-teal-700">
                 <Plus size={14} /> Add row
               </button>
             )}
@@ -253,7 +253,7 @@ export default function ReviewForm(p: {
                     <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-700">
                       Did you mean
                       {suggestions.map((sg) => (
-                        <button key={sg} onClick={() => setMed(r.key, { drug_name: sg })} className="rounded-full border border-brand-300 bg-brand-50 px-2 py-0.5 font-medium text-brand-800 hover:bg-brand-100">{sg}</button>
+                        <button key={sg} onClick={() => setMed(r.key, { drug_name: sg })} className="rounded-full border border-teal-300 bg-teal-50 px-2 py-0.5 font-medium text-teal-800 hover:bg-teal-100">{sg}</button>
                       ))}
                       ?
                     </p>
@@ -271,7 +271,7 @@ export default function ReviewForm(p: {
               );
             })}
             {!ro && (
-              <button onClick={() => setMeds([...meds, { key: newKey(), drug_name: "", dose: "", frequency: "", duration: "", confidence: "high", ok: false, orig: { drug_name: "", dose: "", frequency: "", duration: "" }, flags0: [], confirmed: {} }])} className="flex items-center gap-1 text-sm text-brand-700">
+              <button onClick={() => setMeds([...meds, { key: newKey(), drug_name: "", dose: "", frequency: "", duration: "", confidence: "high", ok: false, orig: { drug_name: "", dose: "", frequency: "", duration: "" }, flags0: [], confirmed: {} }])} className="flex items-center gap-1 text-sm text-teal-700">
                 <Plus size={14} /> Add row
               </button>
             )}
@@ -299,7 +299,7 @@ export default function ReviewForm(p: {
             {blocker && <p className="text-xs text-amber-700">{blocker}</p>}
             {msg && <p className="text-xs text-slate-600">{msg}</p>}
             <div className="flex flex-wrap gap-2">
-              <button disabled={!!blocker || pending} onClick={() => run(() => approveDocument(p.docId, data()))} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-40">
+              <button disabled={!!blocker || pending} onClick={() => run(() => approveDocument(p.docId, data()))} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40">
                 Approve and save
               </button>
               <button disabled={pending} onClick={() => run(() => saveDraft(p.docId, data()), "Draft saved")} className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">

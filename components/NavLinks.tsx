@@ -12,7 +12,7 @@ export default function NavLinks({ showAudit }: { showAudit: boolean }) {
     <nav className="flex h-full items-stretch gap-1">
       {links.map((l) => (
         <Link key={l.href} href={l.href}
-          className={`flex items-center border-b-2 px-3 text-sm font-medium ${l.active ? "border-brand-600 text-brand-700" : "border-transparent text-slate-600 hover:text-brand-700"}`}>
+          className={`flex items-center border-b-2 px-3 text-sm font-medium ${l.active ? "border-teal-600 text-teal-700" : "border-transparent text-slate-600 hover:text-teal-700"}`}>
           {l.label}
         </Link>
       ))}

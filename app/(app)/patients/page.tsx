@@ -22,8 +22,7 @@ export default async function PatientsPage(props: PageProps<"/patients">) {
       {typeof notice === "string" && (
         <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{notice}</p>
       )}
-      <p className="eyebrow">Clinic</p>
-      <h1 className="page-title mb-5">Patients</h1>
+      <h1 className="mb-4 text-2xl font-semibold text-slate-900">Patients</h1>
       <PatientList patients={(patients ?? []).map((p) => ({ ...p, allergies: allergyMap[p.id] ?? [], lastVisit: lastMap[p.id] ?? null }))} />
     </div>
   );

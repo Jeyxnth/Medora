@@ -30,7 +30,7 @@ export default async function DocumentPage(props: PageProps<"/patients/[id]/docu
 
   return (
     <div className="space-y-4">
-      <Link href={`/patients/${id}`} className="text-sm text-brand-700 hover:underline">← Back to {patient?.name ?? "patient"}</Link>
+      <Link href={`/patients/${id}`} className="text-sm text-teal-700 hover:underline">← Back to {patient?.name ?? "patient"}</Link>
       {!extraction ? (
         <div className="card p-6 text-sm text-slate-600">
           This document has not been read yet (extraction may have failed). Discard it and upload again.

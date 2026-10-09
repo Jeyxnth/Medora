@@ -8,7 +8,7 @@ import CareGaps from "@/components/CareGaps";
 import type { BriefResult } from "@/app/api/brief/route";
 import type { AskStatement } from "@/app/api/ask/route";
 
-export default function PreVisitBrief({ patientId, patientName, tile = false }: { patientId: string; patientName: string; tile?: boolean }) {
+export default function PreVisitBrief({ patientId, patientName }: { patientId: string; patientName: string }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [brief, setBrief] = useState<BriefResult | null>(null);
@@ -43,7 +43,7 @@ export default function PreVisitBrief({ patientId, patientName, tile = false }: 
               {s.sources.map((id) => {
                 const src = brief?.sources[id];
                 return src && (
-                  <Link key={id} href={src.href} className="flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-800 ring-1 ring-brand-200 hover:bg-brand-100">
+                  <Link key={id} href={src.href} className="flex items-center gap-1 rounded-md bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800 ring-1 ring-teal-200 hover:bg-teal-100">
                     <FileText size={11} /> {src.label}
                   </Link>
                 );
@@ -63,15 +63,9 @@ export default function PreVisitBrief({ patientId, patientName, tile = false }: 
 
   return (
     <>
-      {tile ? (
-        <button onClick={generate} disabled={loading} className="no-print tile disabled:opacity-60">
-          <span className="tile-icon">{loading ? <Loader2 size={18} className="animate-spin" /> : <ClipboardList size={18} />}</span> Pre-visit brief
-        </button>
-      ) : (
-        <button onClick={generate} disabled={loading} className="no-print flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60">
-          {loading ? <Loader2 size={16} className="animate-spin" /> : <ClipboardList size={16} />} Pre-visit brief
-        </button>
-      )}
+      <button onClick={generate} disabled={loading} className="no-print flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60">
+        {loading ? <Loader2 size={16} className="animate-spin" /> : <ClipboardList size={16} />} Pre-visit brief
+      </button>
 
       {open && (
         <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 sm:p-8 print:static print:bg-transparent print:p-0">
@@ -79,7 +73,7 @@ export default function PreVisitBrief({ patientId, patientName, tile = false }: 
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900">Pre-visit brief: {patientName}</h2>
-                <span className="badge badge-draft mt-1">AI draft, doctor to review</span>
+                <span className="mt-1 inline-block rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-800 ring-1 ring-violet-200">AI draft, doctor to review</span>
               </div>
               <div className="no-print flex gap-1">
                 <button onClick={() => window.print()} disabled={!brief} className="flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"><Printer size={15} /> Print</button>
@@ -89,7 +83,7 @@ export default function PreVisitBrief({ patientId, patientName, tile = false }: 
 
             {loading && (
               <div className="space-y-2" role="status">
-                <p className="flex items-center gap-2 text-sm text-slate-600"><Loader2 size={16} className="animate-spin text-brand-600" /> Reading approved records...</p>
+                <p className="flex items-center gap-2 text-sm text-slate-600"><Loader2 size={16} className="animate-spin text-teal-600" /> Reading approved records...</p>
                 <div className="animate-pulse space-y-2"><div className="h-3 w-11/12 rounded bg-slate-200" /><div className="h-3 w-2/3 rounded bg-slate-200" /></div>
               </div>
             )}
@@ -118,7 +112,7 @@ export default function PreVisitBrief({ patientId, patientName, tile = false }: 
                         <li key={t.id} className="flex items-center gap-2">
                           <span>{t.title}</span>
                           {t.due_date && <span className="text-xs text-slate-500">Due {formatDate(t.due_date)}</span>}
-                          {t.overdue && <span className="badge badge-draft">Overdue</span>}
+                          {t.overdue && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Overdue</span>}
                         </li>
                       ))}
                     </ul>

@@ -24,12 +24,12 @@ export default function PatientList({ patients }: { patients: P[] }) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search by name or MRN"
-          className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+          className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
         />
       </div>
       <div className="card divide-y divide-slate-100 overflow-hidden">
         {shown.map((p) => (
-          <Link key={p.id} href={`/patients/${p.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 hover:bg-brand-50/50">
+          <Link key={p.id} href={`/patients/${p.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 hover:bg-teal-50/50">
             <Avatar name={p.name} />
             <div className="min-w-0 flex-1 basis-48">
               <div className="font-semibold text-slate-900">{p.name}</div>

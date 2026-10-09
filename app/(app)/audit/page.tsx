@@ -19,7 +19,7 @@ function ReviewDetails({ d }: { d: Details }) {
   ];
   return (
     <details className="mt-1 text-xs text-slate-700">
-      <summary className="cursor-pointer text-brand-700">Review details ({d.changes?.length ?? 0} changes)</summary>
+      <summary className="cursor-pointer text-teal-700">Review details ({d.changes?.length ?? 0} changes)</summary>
       <p className="mt-1">Confirmed by {d.confirmed_by ?? "unknown"}</p>
       <ul className="list-disc pl-4">{lines.map((l, i) => <li key={i}>{l}</li>)}</ul>
     </details>
@@ -52,10 +52,7 @@ export default async function AuditPage(props: PageProps<"/audit">) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <p className="eyebrow">Admin</p>
-        <h1 className="page-title">Audit log</h1>
-      </div>
+      <h1 className="text-2xl font-semibold text-slate-900">Audit log</h1>
 
       <form className="flex flex-wrap items-end gap-3 card p-4">
         <label className="text-xs font-medium text-slate-600">Action
@@ -76,8 +73,8 @@ export default async function AuditPage(props: PageProps<"/audit">) {
             {(patients ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </label>
-        <button className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">Filter</button>
-        <Link href="/audit" className="py-2 text-sm text-brand-700 hover:underline">Reset</Link>
+        <button className="rounded-lg bg-teal-600 px-3 py-2 text-sm font-medium text-white hover:bg-teal-700">Filter</button>
+        <Link href="/audit" className="py-2 text-sm text-teal-700 hover:underline">Reset</Link>
       </form>
 
       <div className="overflow-x-auto card">
@@ -95,7 +92,7 @@ export default async function AuditPage(props: PageProps<"/audit">) {
                   <td className="px-4 py-2">{u ? <span className="flex items-center gap-2">{u.full_name} <RoleBadge role={u.role} /></span> : <span className="text-slate-400">unknown</span>}</td>
                   <td className="px-4 py-2"><ActionBadge action={r.action} /></td>
                   <td className="px-4 py-2">{r.entity_type}{r.entity_id && <span className="ml-1 font-mono text-xs text-slate-400">{String(r.entity_id).slice(0, 8)}</span>}{r.details && <ReviewDetails d={r.details} />}</td>
-                  <td className="px-4 py-2">{r.patient_id ? <Link href={`/patients/${r.patient_id}`} className="text-brand-700 hover:underline">{name ?? "Patient"}</Link> : <span className="text-slate-400">—</span>}</td>
+                  <td className="px-4 py-2">{r.patient_id ? <Link href={`/patients/${r.patient_id}`} className="text-teal-700 hover:underline">{name ?? "Patient"}</Link> : <span className="text-slate-400">—</span>}</td>
                 </tr>
               );
             })}
